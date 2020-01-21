@@ -29,18 +29,18 @@ end
 clean_logs
 workease_thread = Thread.new {WorkEase.new.start}
 
+loop do
+  simulate_activity
+end
+
 # loop do
-#   simulate_activity
+#   log(file: $inputs[ARGV[0].to_i], text: 'testing')
+#   sleep rand(1..3)
 # end
 
-loop do
-  log(file: $inputs[ARGV[0].to_i], text: 'testing')
-  sleep rand(1..3)
-end
-
-5.times do
-  log(file: $inputs[ARGV[0].to_i], text: 'testing2')
-  sleep rand(11..13)
-end
+# 5.times do
+#   log(file: $inputs[ARGV[0].to_i], text: 'testing2')
+#   sleep rand(11..13)
+# end
 
 workease_thread.join

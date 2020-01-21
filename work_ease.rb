@@ -7,21 +7,21 @@ require 'pry'
 class WorkEase
   def start
     @bodypart = {
-      'feet' =>
+      :feet =>
         {:last_activity => nil,
          :activity_level => 0,
          :min_rest => 5, # 60
          :max_exertion => 50, # 600
          :high_activity_start => nil
       },
-      'hands' =>
+      :hands =>
         {:last_activity => nil,
          :min_rest => 10,
          :activity_level => 0,
          :max_exertion => 20, # 120
          :high_activity_start => nil
       },
-      'voice' =>
+      :voice =>
         {:last_activity => nil,
          :min_rest => 10,
          :activity_level => 0,
@@ -29,8 +29,6 @@ class WorkEase
          :high_activity_start => nil
       }
     }
-
-    @counter = 0
 
     @pause_untill = 0
 
@@ -40,6 +38,7 @@ class WorkEase
   end
 
   def check_inputs
+    Thread.abort_on_exception = true
     semaphore = Mutex.new
     threads = []
     threads << Thread.new { check_commands }
@@ -53,7 +52,7 @@ class WorkEase
   def check_commands
     File::Tail::Logfile.tail('commands', :backward => 1, :interval => 0.5) do |line|
       if line.start_with?('suspend')
-        seconds = line.split[1]
+        seconds = line.split[1].to_i
         puts "pausing monitoring for #{seconds} seconds"
         @pause_untill = Time.now.to_i + seconds
       end
@@ -67,25 +66,25 @@ class WorkEase
 
   def check_feet
     File::Tail::Logfile.tail('inputs/feet', :backward => 1, :interval => 0.1) do |line|
-      check('feet')
+      check(:feet)
     end
   end
 
   def check_keyboard
     File::Tail::Logfile.tail('inputs/keyboard', :backward => 1, :interval => 0.1) do |line|
-      check('hands')
+      check(:hands)
     end
   end
 
   def check_mouse
     File::Tail::Logfile.tail('inputs/mouse', :backward => 1, :interval => 0.1) do |line|
-      check('hands')
+      check(:hands)
     end
   end
 
   def check_voice
     File::Tail::Logfile.tail('inputs/voice', :backward => 1, :interval => 0.1) do |line|
-      check('voice')
+      check(:voice)
     end
   end
 
@@ -97,7 +96,6 @@ class WorkEase
   end
 
   def check(b)
-    puts "-------- #{@counter += 1}"
     @bodypart[b][:last_activity] = Time.now.to_i if @bodypart[b][:last_activity].nil?
 
     if Time.now.to_i - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
@@ -108,9 +106,9 @@ class WorkEase
       @bodypart[b][:high_activity_start] = 0
     end
 
-    warn("You should give your #{b} a break") if activity_exceeded?(b)
+    warn("You should give your #{b.to_s} a break") if activity_exceeded?(b)
 
-    @bodypart[bodypart][:last_activity] = Time.now.to_i
+    @bodypart[b][:last_activity] = Time.now.to_i
   end
 
   def warn(reason)

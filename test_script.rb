@@ -1,6 +1,6 @@
-require "./work_ease"
+require './work_ease'
 
-$inputs = ['feet', 'keyboard', 'mouse', 'voice']
+$inputs = %w[feet keyboard mouse voice]
 @actions = 0
 @started_at = Time.now.to_i
 
@@ -10,14 +10,14 @@ def clean_logs
 end
 
 def log(file:, text:)
-  File.open("inputs/#{file}", 'a') { |f|
-    f << "#{Time.now.to_s} - #{text}\n"
-  }
+  File.open("inputs/#{file}", 'a') do |f|
+    f << "#{Time.now} - #{text}\n"
+  end
 
-  File.open('testlog', 'a') { |f|
-    f << "#{file} - #{Time.now.to_s} - #{text}\n"
-    puts "#{file} - #{Time.now.to_s} - #{text}"
-  }
+  File.open('testlog', 'a') do |f|
+    f << "#{file} - #{Time.now} - #{text}\n"
+    puts "#{file} - #{Time.now} - #{text}"
+  end
 end
 
 def simulate_activity
@@ -27,7 +27,7 @@ def simulate_activity
 end
 
 clean_logs
-workease_thread = Thread.new {WorkEase.new.start}
+workease_thread = Thread.new { WorkEase.new.start }
 
 # loop do
 #   simulate_activity

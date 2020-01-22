@@ -7,27 +7,21 @@ require 'pry'
 class WorkEase
   def start
     @bodypart = {
-      :feet =>
-        {:last_activity => nil,
-         :activity_level => 0,
-         :min_rest => 5, # 60
-         :max_exertion => 50, # 600
-         :high_activity_start => nil
-      },
-      :hands =>
-        {:last_activity => nil,
-         :min_rest => 10,
-         :activity_level => 0,
-         :max_exertion => 20, # 120
-         :high_activity_start => nil
-      },
-      :voice =>
-        {:last_activity => nil,
-         :min_rest => 10,
-         :activity_level => 0,
-         :max_exertion => 20,# 120
-         :high_activity_start => nil
-      }
+      feet:         { last_activity: nil,
+                      activity_level: 0,
+                      min_rest: 5, # 60
+                      max_exertion: 50, # 600
+                      high_activity_start: nil },
+      hands:         { last_activity: nil,
+                       min_rest: 10,
+                       activity_level: 0,
+                       max_exertion: 20, # 120
+                       high_activity_start: nil },
+      voice:         { last_activity: nil,
+                       min_rest: 10,
+                       activity_level: 0,
+                       max_exertion: 20, # 120
+                       high_activity_start: nil }
     }
 
     @pause_untill = 0
@@ -50,7 +44,7 @@ class WorkEase
   end
 
   def check_commands
-    File::Tail::Logfile.tail('commands', :backward => 1, :interval => 0.5) do |line|
+    File::Tail::Logfile.tail('commands', backward: 1, interval: 0.5) do |line|
       if line.start_with?('suspend')
         seconds = line.split[1].to_i
         puts "pausing monitoring for #{seconds} seconds"
@@ -65,25 +59,25 @@ class WorkEase
   end
 
   def check_feet
-    File::Tail::Logfile.tail('inputs/feet', :backward => 1, :interval => 0.1) do |line|
+    File::Tail::Logfile.tail('inputs/feet', backward: 1, interval: 0.1) do |_line|
       check(:feet)
     end
   end
 
   def check_keyboard
-    File::Tail::Logfile.tail('inputs/keyboard', :backward => 1, :interval => 0.1) do |line|
+    File::Tail::Logfile.tail('inputs/keyboard', backward: 1, interval: 0.1) do |_line|
       check(:hands)
     end
   end
 
   def check_mouse
-    File::Tail::Logfile.tail('inputs/mouse', :backward => 1, :interval => 0.1) do |line|
+    File::Tail::Logfile.tail('inputs/mouse', backward: 1, interval: 0.1) do |_line|
       check(:hands)
     end
   end
 
   def check_voice
-    File::Tail::Logfile.tail('inputs/voice', :backward => 1, :interval => 0.1) do |line|
+    File::Tail::Logfile.tail('inputs/voice', backward: 1, interval: 0.1) do |_line|
       check(:voice)
     end
   end
@@ -92,7 +86,7 @@ class WorkEase
     puts "level #{@bodypart[b][:activity_level]}"
     puts "time active #{Time.now.to_i - @bodypart[b][:high_activity_start]}"
     @bodypart[b][:activity_level] == 1 &&
-    Time.now.to_i - @bodypart[b][:high_activity_start] > @bodypart[b][:max_exertion]
+      Time.now.to_i - @bodypart[b][:high_activity_start] > @bodypart[b][:max_exertion]
   end
 
   def check(b)
@@ -106,7 +100,7 @@ class WorkEase
       @bodypart[b][:high_activity_start] = 0
     end
 
-    warn("You should give your #{b.to_s} a break") if activity_exceeded?(b)
+    warn("You should give your #{b} a break") if activity_exceeded?(b)
 
     @bodypart[b][:last_activity] = Time.now.to_i
   end

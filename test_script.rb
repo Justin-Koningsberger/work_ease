@@ -1,4 +1,4 @@
-require './work_ease'
+require "./work_ease"
 
 $inputs = ['feet', 'keyboard', 'mouse', 'voice']
 @actions = 0
@@ -29,14 +29,14 @@ end
 clean_logs
 workease_thread = Thread.new {WorkEase.new.start}
 
-loop do
-  simulate_activity
-end
-
 # loop do
-#   log(file: $inputs[ARGV[0].to_i], text: 'testing')
-#   sleep rand(1..3)
+#   simulate_activity
 # end
+
+loop do
+  log(file: $inputs[ARGV[0].to_i], text: 'testing')
+  sleep rand(1..3)
+end
 
 # 5.times do
 #   log(file: $inputs[ARGV[0].to_i], text: 'testing2')

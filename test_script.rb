@@ -1,8 +1,6 @@
 require './work_ease'
 
 $inputs = %w[feet keyboard mouse voice]
-@actions = 0
-@started_at = Time.now.to_i
 
 def clean_logs
   $inputs.each { |file| File.truncate("inputs/#{file}", 0) }

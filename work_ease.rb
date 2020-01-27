@@ -72,7 +72,9 @@ class WorkEase
 
   def check_device(id)
     _stdin, stdout, _stderr, _wait_thr = Open3.popen3("xinput test #{id}")
-    stdout.each { check(:hands) }
+    stdout.each do |line|
+      check(:hands) unless line.start_with?('key press')
+    end
   end
 
   def activity_exceeded?(b)

@@ -10,37 +10,37 @@ def clean_logs
 end
 
 def log(file:, text:)
-  File.open("inputs/#{file}", 'a') do |f|
-    f << "#{Time.now} - #{text}\n"
-  end
-
   File.open('testlog', 'a') do |f|
     f << "#{file} - #{Time.now} - #{text}\n"
-    puts "#{file} - #{Time.now} - #{text}"
+    puts "#{file} - #{Time.now} - #{text}\n"
   end
 end
 
-def simulate_activity
-  input = $inputs[rand(4)]
-  log(file: input, text: "action #{@actions += 1}")
-  sleep(rand(1..2))
+def simulate_keyboard(key)
+  `xdotool key #{key}`
+end
+
+def simulate_mouse
+  `xdotool mousemove_relative 5 5`
 end
 
 clean_logs
 workease_thread = Thread.new { WorkEase.new.start }
 
-# loop do
-#   simulate_activity
-# end
+key = 'space'
 
-loop do
-  log(file: $inputs[ARGV[0].to_i], text: 'testing')
-  sleep rand(1..3)
+10.times do
+  log(file: 'keyboard', text: "#{key} pressed")
+  simulate_keyboard(key)
+  sleep 3
 end
 
-# 5.times do
-#   log(file: $inputs[ARGV[0].to_i], text: 'testing2')
-#   sleep rand(11..13)
-# end
+sleep 12
+
+10.times do
+  log(file: 'mouse', text: 'mouse movement')
+  simulate_mouse
+  sleep 3
+end
 
 workease_thread.join

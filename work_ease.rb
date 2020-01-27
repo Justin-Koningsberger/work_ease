@@ -3,6 +3,7 @@
 require 'file-tail'
 require 'time'
 require 'pry'
+require 'open3'
 
 class WorkEase
   def start
@@ -24,7 +25,7 @@ class WorkEase
                        high_activity_start: nil }
     }
 
-    @pause_untill = 0
+    @pause_until = 0
 
     File.truncate('commands', 0)
 
@@ -33,13 +34,12 @@ class WorkEase
 
   def check_inputs
     Thread.abort_on_exception = true
-    semaphore = Mutex.new
     threads = []
     threads << Thread.new { check_commands }
     threads << Thread.new { check_feet }
     threads << Thread.new { check_voice }
-    threads << Thread.new { semaphore.synchronize { check_keyboard } }
-    threads << Thread.new { semaphore.synchronize { check_mouse } }
+    threads << Thread.new { check_device(5) }
+    threads << Thread.new { check_device(4) }
     threads.each(&:join)
   end
 
@@ -48,7 +48,7 @@ class WorkEase
       if line.start_with?('suspend')
         seconds = line.split[1].to_i
         puts "pausing monitoring for #{seconds} seconds"
-        @pause_untill = Time.now.to_i + seconds
+        @pause_until = Time.now.to_i + seconds
       end
 
       # if line.start_with?('set feet_warning')
@@ -64,22 +64,15 @@ class WorkEase
     end
   end
 
-  def check_keyboard
-    File::Tail::Logfile.tail('inputs/keyboard', backward: 1, interval: 0.1) do |_line|
-      check(:hands)
-    end
-  end
-
-  def check_mouse
-    File::Tail::Logfile.tail('inputs/mouse', backward: 1, interval: 0.1) do |_line|
-      check(:hands)
-    end
-  end
-
   def check_voice
     File::Tail::Logfile.tail('inputs/voice', backward: 1, interval: 0.1) do |_line|
       check(:voice)
     end
+  end
+
+  def check_device(id)
+    _stdin, stdout, _stderr, _wait_thr = Open3.popen3("xinput test #{id}")
+    stdout.each { check(:hands) }
   end
 
   def activity_exceeded?(b)
@@ -90,22 +83,28 @@ class WorkEase
   end
 
   def check(b)
-    @bodypart[b][:last_activity] = Time.now.to_i if @bodypart[b][:last_activity].nil?
+    semaphore = Mutex.new
+    semaphore.synchronize do
+      @bodypart[b][:last_activity] = Time.now.to_i if @bodypart[b][:last_activity].nil?
 
-    if Time.now.to_i - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
-      @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity] if @bodypart[b][:activity_level] == 0
-      @bodypart[b][:activity_level] = 1
-    else
-      @bodypart[b][:activity_level] = 0
-      @bodypart[b][:high_activity_start] = 0
+      if Time.now.to_i - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
+        @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity] if @bodypart[b][:activity_level] == 0
+        @bodypart[b][:activity_level] = 1
+      else
+        @bodypart[b][:activity_level] = 0
+        @bodypart[b][:high_activity_start] = 0
+      end
+
+      warn("You should give your #{b} a break") if activity_exceeded?(b)
+
+      @bodypart[b][:last_activity] = Time.now.to_i
     end
-
-    warn("You should give your #{b} a break") if activity_exceeded?(b)
-
-    @bodypart[b][:last_activity] = Time.now.to_i
   end
 
   def warn(reason)
-    puts reason if Time.now.to_i > @pause_untill
+    if Time.now.to_i > @pause_until
+      Process.fork{ `xmessage #{reason} -center -timeout 3` }
+      File.open('testlog', 'a') { |f| f << "#{reason}\n" }
+    end
   end
 end

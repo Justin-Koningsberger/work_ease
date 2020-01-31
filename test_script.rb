@@ -1,9 +1,8 @@
 require './work_ease'
 
-@inputs = %w[feet keyboard mouse voice]
-
 def clean_logs
-  @inputs.each { |file| File.truncate("inputs/#{file}", 0) }
+  inputs = %w[feet keyboard mouse voice]
+  inputs.each { |file| File.truncate("inputs/#{file}", 0) }
   File.truncate('testlog', 0)
 end
 
@@ -47,17 +46,14 @@ workease_thread = Thread.new { WorkEase.new.start(keyboard_id: keyboard_id, mous
 
 key = 'space'
 
-10.times do
-  log(file: 'keyboard', text: "#{key} pressed")
-  simulate_keyboard(key)
-  sleep 3
-end
-
-sleep 12
-
-10.times do
-  log(file: 'mouse', text: 'mouse movement')
-  simulate_mouse
+15.times do |index|
+  if index.even?
+    log(file: 'keyboard', text: "#{key} pressed")
+    simulate_keyboard(key)
+  else
+    log(file: 'mouse', text: 'mouse movement')
+    simulate_mouse
+  end
   sleep 3
 end
 

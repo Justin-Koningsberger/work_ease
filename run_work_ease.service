@@ -3,7 +3,7 @@ Description=This starts the WorkEase thread on booting.
 
 [Service]
 Type=simple
-ExecStart=/bin/bash /usr/bin/run_work_ease.sh
+ExecStart=/bin/bash /usr/bin/run_work_ease.rb
 StandardOutput=syslog
 StandardError=syslog
 

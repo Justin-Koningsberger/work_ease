@@ -1,6 +1,6 @@
 #! /usr/bin/env ruby
 
-require_relative 'work_ease'
+require '/media/sf_Work_for_Lucas/workease/work_ease.rb'
 
 bodypart_activity = {
   feet: { last_activity: nil,

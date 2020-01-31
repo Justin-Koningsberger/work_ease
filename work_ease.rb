@@ -6,40 +6,39 @@ require 'pry'
 require 'open3'
 
 class WorkEase
-  def start
-    @bodypart = {
-      feet:         { last_activity: nil,
-                      activity_level: 0,
-                      min_rest: 5, # 60
-                      max_exertion: 50, # 600
-                      high_activity_start: nil },
-      hands:         { last_activity: nil,
-                       min_rest: 10,
-                       activity_level: 0,
-                       max_exertion: 20, # 120
-                       high_activity_start: nil },
-      voice:         { last_activity: nil,
-                       min_rest: 10,
-                       activity_level: 0,
-                       max_exertion: 20, # 120
-                       high_activity_start: nil }
-    }
-
+  def start(keyboard_id:, mouse_id:, bodypart_activity:)
+    @bodypart = bodypart_activity
     @pause_until = 0
 
     File.truncate('commands', 0)
 
-    check_inputs
+    check_inputs(keyboard_id, mouse_id)
   end
 
-  def check_inputs
+  def self.find_device_ids(keyboard_name:, mouse_name:)
+    output = `xinput`
+    output.split("\n").each do |line|
+      if line.include?(keyboard_name)
+        line.split(' ').each do |word|
+          @keyboard_id = word[-1] if word.start_with?('id=')
+        end
+      end
+      next unless line.include?(mouse_name)
+      line.split(' ').each do |word|
+        @mouse_id = word[-1] if word.start_with?('id=')
+      end
+    end
+    [@keyboard_id, @mouse_id]
+  end
+
+  def check_inputs(keyboard_id, mouse_id)
     Thread.abort_on_exception = true
     threads = []
     threads << Thread.new { check_commands }
     threads << Thread.new { check_feet }
     threads << Thread.new { check_voice }
-    threads << Thread.new { check_device(5) }
-    threads << Thread.new { check_device(4) }
+    threads << Thread.new { check_device(keyboard_id) }
+    threads << Thread.new { check_device(mouse_id) }
     threads.each(&:join)
   end
 
@@ -105,7 +104,9 @@ class WorkEase
 
   def warn(reason)
     if Time.now.to_i > @pause_until
-      Process.fork{ `xmessage #{reason} -center -timeout 3` }
+      `paplay ./when.ogg`
+      sleep 2
+      Process.fork { `xmessage #{reason} -center -timeout 3` }
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end

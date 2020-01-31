@@ -1,0 +1,24 @@
+execute these commands within the workease folder
+
+sudo cp run_work_ease.sh /usr/bin/run_work_ease.sh
+sudo chmod +x /usr/bin/run_work_ease.sh
+
+sudo cp run_work_ease.service /etc/systemd/system/run_work_ease.service
+sudo chmod 644 /etc/systemd/system/run_work_ease.service
+
+testing:
+
+sudo systemctl start run_work_ease
+sudo systemctl status run_work_ease
+
+sudo systemctl stop run_work_ease
+sudo systemctl restart run_work_ease
+
+
+enable service on startup:
+
+sudo systemctl enable run_work_ease
+
+check startup time:
+
+sudo systemctl status run_work_ease

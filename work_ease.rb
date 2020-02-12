@@ -6,13 +6,13 @@ require 'pry'
 require 'open3'
 
 class WorkEase
-  def start(keyboard_id:, mouse_id:, bodypart_activity:)
+  def start(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:)
     @bodypart = bodypart_activity
     @pause_until = 0
 
     File.truncate('commands', 0)
 
-    check_inputs(keyboard_id, mouse_id)
+    check_inputs(keyboard_id, mouse_id, feet_path, voice_path)
   end
 
   def self.find_device_ids(keyboard_name:, mouse_name:)
@@ -31,12 +31,12 @@ class WorkEase
     [@keyboard_id, @mouse_id]
   end
 
-  def check_inputs(keyboard_id, mouse_id)
+  def check_inputs(keyboard_id, mouse_id, feet_path, voice_path)
     Thread.abort_on_exception = true
     threads = []
     threads << Thread.new { check_commands }
-    threads << Thread.new { check_feet }
-    threads << Thread.new { check_voice }
+    threads << Thread.new { check_feet(feet_path) }
+    threads << Thread.new { check_voice(voice_path) }
     threads << Thread.new { check_device(keyboard_id) }
     threads << Thread.new { check_device(mouse_id) }
     threads.each(&:join)
@@ -57,14 +57,14 @@ class WorkEase
     end
   end
 
-  def check_feet
-    File::Tail::Logfile.tail('inputs/feet', backward: 1, interval: 0.1) do |_line|
+  def check_feet(feet_path)
+    File::Tail::Logfile.tail(feet_path, backward: 1, interval: 0.1) do |_line|
       check(:feet)
     end
   end
 
-  def check_voice
-    File::Tail::Logfile.tail('inputs/voice', backward: 1, interval: 0.1) do |_line|
+  def check_voice(voice_path)
+    File::Tail::Logfile.tail(voice_path, backward: 1, interval: 0.1) do |_line|
       check(:voice)
     end
   end

@@ -42,7 +42,7 @@ bodypart_activity = {
 clean_logs
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'Virtual core XTEST keyboard', mouse_name: 'Virtual core XTEST pointer')
 
-workease_thread = Thread.new { WorkEase.new.start(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity) }
+workease_thread = Thread.new { WorkEase.new.start(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: 'inputs/feet', voice_path: 'inputs/voice') }
 
 key = 'space'
 

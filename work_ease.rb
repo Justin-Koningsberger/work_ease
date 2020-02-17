@@ -20,12 +20,12 @@ class WorkEase
     output.split("\n").each do |line|
       if line.include?(keyboard_name)
         line.split(' ').each do |word|
-          @keyboard_id = word[-1] if word.start_with?('id=')
+          @keyboard_id = word.delete_prefix('id=') if word.start_with?('id=')
         end
       end
       next unless line.include?(mouse_name)
       line.split(' ').each do |word|
-        @mouse_id = word[-1] if word.start_with?('id=')
+        @mouse_id = word.delete_prefix('id=') if word.start_with?('id=')
       end
     end
     [@keyboard_id, @mouse_id]

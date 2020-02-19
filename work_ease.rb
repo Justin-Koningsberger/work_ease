@@ -70,25 +70,35 @@ class WorkEase
   end
 
   def check_device(id)
-    _stdin, stdout, _stderr, _wait_thr = Open3.popen3("xinput test #{id}")
+    _stdin, stdout, _stderr, _wait_thr = Open3.popen3('xinput test-xi2 --root')
+    event = nil
     stdout.each do |line|
-      check(:hands) unless line.start_with?('key press')
+      event = line.split.last if line.include?('EVENT type')
+      next unless line.include?('device:')
+      device = line.split[1]
+      # TODO: get rid of hardcoded device id used in testing env
+      if (device == id || device.to_i == 13) && event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)'
+        check(:hands)
+      end
     end
   end
 
   def activity_exceeded?(b)
+    time = Time.now.to_i
     puts "level #{@bodypart[b][:activity_level]}"
-    puts "time active #{Time.now.to_i - @bodypart[b][:high_activity_start]}"
+    puts "time active #{time - @bodypart[b][:high_activity_start]}"
     @bodypart[b][:activity_level] == 1 &&
-      Time.now.to_i - @bodypart[b][:high_activity_start] > @bodypart[b][:max_exertion]
+      time - @bodypart[b][:high_activity_start] > @bodypart[b][:max_exertion] &&
+      time > @bodypart[b][:last_activity]
   end
 
   def check(b)
     semaphore = Mutex.new
     semaphore.synchronize do
-      @bodypart[b][:last_activity] = Time.now.to_i if @bodypart[b][:last_activity].nil?
+      time = Time.now.to_i
+      @bodypart[b][:last_activity] = time if @bodypart[b][:last_activity].nil?
 
-      if Time.now.to_i - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
+      if time - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
         @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity] if @bodypart[b][:activity_level] == 0
         @bodypart[b][:activity_level] = 1
       else
@@ -98,15 +108,16 @@ class WorkEase
 
       warn("You should give your #{b} a break") if activity_exceeded?(b)
 
-      @bodypart[b][:last_activity] = Time.now.to_i
+      @bodypart[b][:last_activity] = time
     end
   end
 
   def warn(reason)
     if Time.now.to_i > @pause_until
       `paplay ./when.ogg`
-      sleep 2
+      sleep 1
       Process.fork { `xmessage #{reason} -center -timeout 3` }
+      @pause_until = Time.now.to_i + 3
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end

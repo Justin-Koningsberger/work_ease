@@ -1,6 +1,9 @@
 execute these commands within the workease folder
 
-sudo cp run_work_ease.sh /usr/bin/run_work_ease.rb
+sudo chmod +x /usr/bin/suspend.rb
+ln -s "pwd + suspend.rb" ~/bin/wrksus
+
+sudo cp run_work_ease.rb /usr/bin/run_work_ease.rb
 sudo chmod +x /usr/bin/run_work_ease.rb
 
 sudo cp run_work_ease.service /etc/systemd/system/run_work_ease.service

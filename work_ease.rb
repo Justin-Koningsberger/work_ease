@@ -49,11 +49,6 @@ class WorkEase
         puts "pausing monitoring for #{seconds} seconds"
         @pause_until = Time.now.to_i + seconds
       end
-
-      # if line.start_with?('set feet_warning')
-      #   warning = line.split.drop(2).join(' ')
-      #   puts warning
-      # end
     end
   end
 

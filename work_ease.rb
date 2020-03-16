@@ -39,6 +39,7 @@ class WorkEase
     threads << Thread.new { check_voice(voice_path) }
     threads << Thread.new { check_device(keyboard_id) }
     threads << Thread.new { check_device(mouse_id) }
+    threads << Thread.new { check_slack_call }
     threads.each(&:join)
   end
 
@@ -75,6 +76,28 @@ class WorkEase
       if (device == id || device.to_i == 13) && event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)'
         check(:hands)
       end
+    end
+  end
+
+  def check_slack_call
+    call_started = nil
+    call_ended = nil
+    last_warning = nil
+    loop do
+      xids = `xdotool search --class --classname --name slack`
+      slack_call = xids.find do |xid|
+        !`xwininfo -all -id "#{xid}"|grep "Window shape extents:  300x56+0+0"`.strip.empty?
+      end
+      call_started = Time.now if slack_call && call_started.nil?
+      call_ended = Time.now if !slack_call && call_ended.nil?
+      call_started, last_warning = nil if call_ended + 600 > time.now
+
+      if Time.now - @call_started.to_i > 2700
+        warn("You have been on a call for over 45 minutes")
+        last_warning = Time.now
+      end
+      sleeptime = last_warning.nil? ? 60 : 300
+      sleep sleeptime
     end
   end
 

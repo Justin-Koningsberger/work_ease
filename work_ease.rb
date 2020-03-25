@@ -75,7 +75,6 @@ class WorkEase
       event = line.split.last if line.include?('EVENT type')
       next unless line.include?('device:')
       device = line.split[1]
-      # TODO: get rid of hardcoded device id used in testing env
       if (device == keyboard_id || device == mouse_id) && (event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)')
         check(:hands)
       end
@@ -92,11 +91,20 @@ class WorkEase
         !`xwininfo -all -id "#{xid}"|grep "Window shape extents:  300x56+0+0"`.strip.empty?
       end
       call_started = Time.now.to_i if slack_call && call_started.nil?
-      call_ended = Time.now.to_i if !slack_call && call_ended.nil?
-      call_started, last_warning = nil, nil if call_ended && (call_ended + 600) > Time.now.to_i
+      # puts "call duration: #{Time.now.to_i - call_started}" if call_started
+      call_ended = Time.now.to_i if !slack_call && call_ended.nil? && !call_started.nil?
+      # puts "call ended for: #{Time.now.to_i - call_ended}" if call_ended
+
+      call_started = nil if call_ended && !slack_call
+      if (call_ended && (call_ended + 600) <= Time.now.to_i)
+        # puts "reset monitoring"
+        last_warning = nil
+        call_ended = nil
+      end
 
       if call_started && Time.now.to_i - call_started.to_i > 2700
         warn("You have been on a call for over 45 minutes")
+        # puts "warning"
         last_warning = Time.now.to_i
       end
       sleeptime = last_warning.nil? ? 60 : 300

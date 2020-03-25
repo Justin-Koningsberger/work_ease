@@ -1,6 +1,6 @@
 #! /usr/bin/env ruby
 
-require './work_ease.rb'
+require_relative 'work_ease.rb'
 
 bodypart_activity = {
   feet: { last_activity: nil,
@@ -14,7 +14,7 @@ bodypart_activity = {
            max_exertion: 10,
            high_activity_start: nil },
   voice: { last_activity: nil,
-           min_rest: 10,
+           min_rest: 30,
            activity_level: 0,
            max_exertion: 120,
            high_activity_start: nil }

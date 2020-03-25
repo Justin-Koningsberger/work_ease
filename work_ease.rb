@@ -10,7 +10,7 @@ class WorkEase
     @bodypart = bodypart_activity
     @pause_until = 0
 
-    File.truncate('commands', 0)
+    # File.truncate('commands', 0)
 
     check_inputs(keyboard_id, mouse_id, feet_path, voice_path)
   end
@@ -28,17 +28,20 @@ class WorkEase
         @mouse_id = word.delete_prefix('id=') if word.start_with?('id=')
       end
     end
+    puts @mouse_id
+    puts @mouse_id.inspect
+    puts @keyboard_id
+    puts @keyboard_id.inspect
     [@keyboard_id, @mouse_id]
   end
 
   def check_inputs(keyboard_id, mouse_id, feet_path, voice_path)
     Thread.abort_on_exception = true
     threads = []
-    threads << Thread.new { check_commands }
+    # threads << Thread.new { check_commands }
     threads << Thread.new { check_feet(feet_path) }
     threads << Thread.new { check_voice(voice_path) }
-    threads << Thread.new { check_device(keyboard_id) }
-    threads << Thread.new { check_device(mouse_id) }
+    threads << Thread.new { check_device(keyboard_id, mouse_id) }
     threads << Thread.new { check_slack_call }
     threads.each(&:join)
   end
@@ -65,7 +68,7 @@ class WorkEase
     end
   end
 
-  def check_device(id)
+  def check_device(keyboard_id, mouse_id)
     _stdin, stdout, _stderr, _wait_thr = Open3.popen3('xinput test-xi2 --root')
     event = nil
     stdout.each do |line|
@@ -73,7 +76,7 @@ class WorkEase
       next unless line.include?('device:')
       device = line.split[1]
       # TODO: get rid of hardcoded device id used in testing env
-      if (device == id || device.to_i == 13) && event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)'
+      if (device == keyboard_id || device == mouse_id) && (event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)')
         check(:hands)
       end
     end
@@ -84,17 +87,17 @@ class WorkEase
     call_ended = nil
     last_warning = nil
     loop do
-      xids = `xdotool search --class --classname --name slack`
+      xids = `xdotool search --class --classname --name slack`.split("\n")
       slack_call = xids.find do |xid|
         !`xwininfo -all -id "#{xid}"|grep "Window shape extents:  300x56+0+0"`.strip.empty?
       end
-      call_started = Time.now if slack_call && call_started.nil?
-      call_ended = Time.now if !slack_call && call_ended.nil?
-      call_started, last_warning = nil if call_ended + 600 > time.now
+      call_started = Time.now.to_i if slack_call && call_started.nil?
+      call_ended = Time.now.to_i if !slack_call && call_ended.nil?
+      call_started, last_warning = nil, nil if call_ended && (call_ended + 600) > Time.now.to_i
 
-      if Time.now - @call_started.to_i > 2700
+      if call_started && Time.now.to_i - call_started.to_i > 2700
         warn("You have been on a call for over 45 minutes")
-        last_warning = Time.now
+        last_warning = Time.now.to_i
       end
       sleeptime = last_warning.nil? ? 60 : 300
       sleep sleeptime

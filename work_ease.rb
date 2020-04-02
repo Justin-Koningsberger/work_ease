@@ -157,7 +157,7 @@ class WorkEase
   def rest_timer(time, activity)
     Process.fork do
       sleep time
-      `paplay ./a-tone.ogg`
+      `paplay ./service-login.ogg`
       `xmessage #{activity}-break over -center -timeout 3`
     end
   end

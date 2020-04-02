@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require './work_ease'
 
 def clean_logs

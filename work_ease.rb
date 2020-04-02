@@ -1,4 +1,5 @@
 #! /usr/bin/env ruby
+# frozen_string_literal: true
 
 require 'file-tail'
 require 'time'
@@ -24,6 +25,7 @@ class WorkEase
         end
       end
       next unless line.include?(mouse_name)
+
       line.split(' ').each do |word|
         @mouse_id = word.delete_prefix('id=') if word.start_with?('id=')
       end
@@ -74,6 +76,7 @@ class WorkEase
     stdout.each do |line|
       event = line.split.last if line.include?('EVENT type')
       next unless line.include?('device:')
+
       device = line.split[1]
       if (device == keyboard_id || device == mouse_id) && (event == '(ButtonPress)' || event == '(KeyPress)' || event == '(Motion)')
         check(:hands)
@@ -92,18 +95,20 @@ class WorkEase
       end
       call_started = Time.now.to_i if slack_call && call_started.nil?
       # puts "call duration: #{Time.now.to_i - call_started}" if call_started
-      call_ended = Time.now.to_i if !slack_call && call_ended.nil? && !call_started.nil?
+      if !slack_call && call_ended.nil? && !call_started.nil?
+        call_ended = Time.now.to_i
+      end
       # puts "call ended for: #{Time.now.to_i - call_ended}" if call_ended
 
       call_started = nil if call_ended && !slack_call
-      if (call_ended && (call_ended + 600) <= Time.now.to_i)
+      if call_ended && (call_ended + 600) <= Time.now.to_i
         # puts "reset monitoring"
         last_warning = nil
         call_ended = nil
       end
 
       if call_started && Time.now.to_i - call_started.to_i > 2700
-        warn("You have been on a call for over 45 minutes, take a 10 minute break")
+        warn('You have been on a call for over 45 minutes, take a 10 minute break')
         sleep 4
         rest_timer(600, 'slack_call')
         # puts "warning"
@@ -130,7 +135,9 @@ class WorkEase
       @bodypart[b][:last_activity] = time if @bodypart[b][:last_activity].nil?
 
       if time - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
-        @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity] if @bodypart[b][:activity_level] == 0
+        if @bodypart[b][:activity_level] == 0
+          @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity]
+        end
         @bodypart[b][:activity_level] = 1
       else
         @bodypart[b][:activity_level] = 0

@@ -103,7 +103,9 @@ class WorkEase
       end
 
       if call_started && Time.now.to_i - call_started.to_i > 2700
-        warn("You have been on a call for over 45 minutes")
+        warn("You have been on a call for over 45 minutes, take a 10 minute break")
+        sleep 4
+        rest_timer(600, 'slack_call')
         # puts "warning"
         last_warning = Time.now.to_i
       end
@@ -135,9 +137,21 @@ class WorkEase
         @bodypart[b][:high_activity_start] = 0
       end
 
-      warn("You should give your #{b} a break") if activity_exceeded?(b)
+      if activity_exceeded?(b)
+        warn("You should give your #{b} a break, wait #{@bodypart[b][:min_rest]} seconds")
+        sleep 1
+        rest_timer(@bodypart[b][:min_rest], b)
+      end
 
       @bodypart[b][:last_activity] = time
+    end
+  end
+
+  def rest_timer(time, activity)
+    Process.fork do
+      sleep time
+      `paplay ./a-tone.ogg`
+      `xmessage #{activity}-break over -center -timeout 3`
     end
   end
 

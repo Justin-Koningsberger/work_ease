@@ -146,7 +146,6 @@ class WorkEase
 
       if activity_exceeded?(b)
         warn("You should give your #{b} a break, wait #{@bodypart[b][:min_rest]} seconds")
-        sleep 1
         rest_timer(@bodypart[b][:min_rest], b)
       end
 
@@ -165,9 +164,9 @@ class WorkEase
   def warn(reason)
     if Time.now.to_i > @pause_until
       `paplay ./when.ogg`
+      @pause_until = Time.now.to_i + 5
       sleep 1
       Process.fork { `xmessage #{reason} -center -timeout 3` }
-      @pause_until = Time.now.to_i + 3
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end

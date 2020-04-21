@@ -91,7 +91,7 @@ class WorkEase
     loop do
       xids = `xdotool search --class --classname --name slack`.split("\n")
       slack_call = xids.find do |xid|
-        !`xwininfo -all -id "#{xid}"|grep "Window shape extents:  300x56+0+0"`.strip.empty?
+        !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
       end
       call_started = Time.now.to_i if slack_call && call_started.nil?
       # puts "call duration: #{Time.now.to_i - call_started}" if call_started

@@ -67,7 +67,9 @@ class WorkEase
         time_active = nil
       end
 
-      messg = "You have been fairly active for #{(time - time_active) / 60} minutes, take a ten minute break" unless time_active.nil?
+      unless time_active.nil?
+        messg = "You have been fairly active for #{(time - time_active) / 60} minutes, take a ten minute break"
+      end
       warn(messg) if !time_active.nil? && time - time_active >= 50 * 60
 
       sleep interval

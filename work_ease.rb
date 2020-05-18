@@ -118,14 +118,10 @@ class WorkEase
     last_warning = nil
     loop do
       xids = `xdotool search --class --classname --name slack`.split("\n")
-      if $? > 0
-        messg = "xdotool ran into an error, exitstatus: #{$?.exitstatus}"
-        `paplay ./dialog-error.ogg`
-        sleep 1
-        Process.fork { `xmessage messg -center -timeout 3` }
-      end
+      check_exit_status("xdotool")
       slack_call = xids.find do |xid|
         !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
+        check_exit_status("xwininfo")
       end
       call_started = Time.now.to_i if slack_call && call_started.nil?
       @call_active = true if slack_call
@@ -209,6 +205,15 @@ class WorkEase
 end
 
 private
+
+def check_exit_status(program)
+  if $?.exitstatus > 0
+    messg = "#{program} ran into an error, exitstatus: #{$?.exitstatus}"
+    `paplay ./dialog-error.ogg`
+    sleep 1
+    Process.fork { `xmessage messg -center -timeout 3` }
+  end
+end
 
 def nil_check(object, time, interval)
   object.nil? ? false : time - object <= interval

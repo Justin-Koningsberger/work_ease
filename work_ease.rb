@@ -118,6 +118,12 @@ class WorkEase
     last_warning = nil
     loop do
       xids = `xdotool search --class --classname --name slack`.split("\n")
+      if $? > 0
+        messg = "xdotool ran into an error, exitstatus: #{$?.exitstatus}"
+        `paplay ./dialog-error.ogg`
+        sleep 1
+        Process.fork { `xmessage messg -center -timeout 3` }
+      end
       slack_call = xids.find do |xid|
         !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
       end

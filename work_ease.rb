@@ -52,6 +52,7 @@ class WorkEase
   def overall_activity
     time_active = nil
     interval = 3 * 60
+    stretch_timer = nil
     puts 'Start overall activity counter'
     loop do
       time = Time.now.to_i
@@ -63,14 +64,21 @@ class WorkEase
       if feet_active || hands_active || voice_active || call_active
         time_active = Time.now.to_i if time_active.nil?
         puts "Overall time active: #{time - time_active} seconds"
+        stretch_timer = Time.now.to_i if stretch_timer.nil?
       else
         time_active = nil
+        stretch_timer = nil
       end
 
-      unless time_active.nil?
-        messg = "You have been fairly active for #{(time - time_active) / 60} minutes, take a ten minute break"
+      if time_active && time - time_active >= 50 * 60
+        messg = "You have been fairly active for #{(time - time_active) / 60} \
+          minutes, take a ten minute break"
+        warn(messg)
       end
-      warn(messg) if !time_active.nil? && time - time_active >= 50 * 60
+
+      if stretch_timer && time - stretch_timer >= 15
+        warn("You've been active for 15 minutes, stretch for a bit")
+      end
 
       sleep interval
     end
@@ -118,7 +126,7 @@ class WorkEase
     last_warning = nil
     loop do
       xids = `xdotool search --class --classname --name slack`.split("\n")
-      check_exit_status("xdotool")
+      #check_exit_status("xdotool")
       slack_call = xids.find do |xid|
         !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
         check_exit_status("xwininfo")
@@ -211,7 +219,7 @@ def check_exit_status(program)
     messg = "#{program} ran into an error, exitstatus: #{$?.exitstatus}"
     `paplay ./dialog-error.ogg`
     sleep 1
-    Process.fork { `xmessage messg -center -timeout 3` }
+    Process.fork { `xmessage #{messg} -center -timeout 3` }
   end
 end
 

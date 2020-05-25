@@ -45,7 +45,41 @@ class WorkEase
     threads << Thread.new { check_voice(voice_path) }
     threads << Thread.new { check_device(keyboard_id, mouse_id) }
     threads << Thread.new { check_slack_call }
+    threads << Thread.new { overall_activity }
     threads.each(&:join)
+  end
+
+  def overall_activity
+    time_active = nil
+    interval = 3 * 60
+    stretch_timer = Time.now.to_i
+    puts 'Start overall activity counter'
+    loop do
+      time = Time.now.to_i
+      feet_active = nil_check(@bodypart[:feet][:last_activity], time, interval)
+      hands_active = nil_check(@bodypart[:hands][:last_activity], time, interval)
+      voice_active = nil_check(@bodypart[:voice][:last_activity], time, interval)
+      call_active = @call_active.nil? ? false : @call_active
+
+      if feet_active || hands_active || voice_active || call_active
+        time_active = Time.now.to_i if time_active.nil?
+        puts "Overall time active: #{time - time_active} seconds"
+      else
+        time_active = nil
+      end
+
+      if (stretch_timer + 15 * 60) < Time.now.to_i
+        warn('15 minutes elapsed, stretch for a bit')
+        stretch_timer = Time.now.to_i + 30
+      end
+
+      unless time_active.nil?
+        messg = "You have been fairly active for #{(time - time_active) / 60} minutes, take a ten minute break"
+      end
+      warn(messg) if !time_active.nil? && time - time_active >= 50 * 60
+
+      sleep interval
+    end
   end
 
   def check_commands
@@ -90,12 +124,16 @@ class WorkEase
     last_warning = nil
     loop do
       xids = `xdotool search --class --classname --name slack`.split("\n")
+      check_exit_status("xdotool")
       slack_call = xids.find do |xid|
         !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
+        check_exit_status("xwininfo")
       end
       call_started = Time.now.to_i if slack_call && call_started.nil?
+      @call_active = true if slack_call
       # puts "call duration: #{Time.now.to_i - call_started}" if call_started
       if !slack_call && call_ended.nil? && !call_started.nil?
+        @call_active = false
         call_ended = Time.now.to_i
       end
       # puts "call ended for: #{Time.now.to_i - call_ended}" if call_ended
@@ -166,8 +204,23 @@ class WorkEase
       `paplay ./when.ogg`
       @pause_until = Time.now.to_i + 5
       sleep 1
-      Process.fork { `xmessage #{reason} -center -timeout 3` }
+      Process.fork { `xmessage #{Shellwords.escape(reason)} -center -timeout 3` }
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end
+end
+
+private
+
+def check_exit_status(program)
+  if $?.exitstatus > 0
+    messg = "#{program} ran into an error, exitstatus: #{$?.exitstatus}"
+    `paplay ./dialog-error.ogg`
+    sleep 1
+    Process.fork { `xmessage messg -center -timeout 3` }
+  end
+end
+
+def nil_check(object, time, interval)
+  object.nil? ? false : time - object <= interval
 end

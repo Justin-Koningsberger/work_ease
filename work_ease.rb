@@ -52,6 +52,7 @@ class WorkEase
   def overall_activity
     time_active = nil
     interval = 3 * 60
+    stretch_timer = Time.now.to_i
     puts 'Start overall activity counter'
     loop do
       time = Time.now.to_i
@@ -65,6 +66,11 @@ class WorkEase
         puts "Overall time active: #{time - time_active} seconds"
       else
         time_active = nil
+      end
+
+      if (stretch_timer + 15 * 60) < Time.now.to_i
+        warn('15 minutes elapsed, stretch for a bit')
+        stretch_timer = Time.now.to_i + 30
       end
 
       unless time_active.nil?

@@ -76,7 +76,7 @@ class WorkEase
         warn(messg)
       end
 
-      if stretch_timer && time - stretch_timer >= 15
+      if stretch_timer && time - stretch_timer >= 15 * 60
         warn("You've been active for 15 minutes, stretch for a bit")
       end
 

@@ -7,9 +7,12 @@ require 'pry'
 require 'open3'
 
 class WorkEase
-  def start(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:)
+  def start(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:, testing:)
+    @test = testing
     @bodypart = bodypart_activity
     @pause_until = 0
+
+    @running = true
 
     # File.truncate('commands', 0)
 
@@ -54,7 +57,7 @@ class WorkEase
     interval = 3 * 60
     stretch_timer = nil
     puts 'Start overall activity counter'
-    loop do
+    while @running
       time = Time.now.to_i
       feet_active = nil_check(@bodypart[:feet][:last_activity], time, interval)
       hands_active = nil_check(@bodypart[:hands][:last_activity], time, interval)
@@ -124,7 +127,7 @@ class WorkEase
     call_started = nil
     call_ended = nil
     last_warning = nil
-    loop do
+    while @running
       xids = `xdotool search --class --classname --name slack`.split("\n")
       #check_exit_status("xdotool")
       slack_call = xids.find do |xid|
@@ -202,7 +205,9 @@ class WorkEase
   end
 
   def warn(reason)
-    if Time.now.to_i > @pause_until
+    if @test 
+      File.open('testlog', 'a') {|f| f << "#{Time.now} - #{reason}\n"}
+    elsif Time.now.to_i > @pause_until
       `paplay ./when.ogg`
       @pause_until = Time.now.to_i + 5
       sleep 1
@@ -210,19 +215,23 @@ class WorkEase
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end
-end
 
-private
-
-def check_exit_status(program)
-  if $?.exitstatus > 0
-    messg = "#{program} ran into an error, exitstatus: #{$?.exitstatus}"
-    `paplay ./dialog-error.ogg`
-    sleep 1
-    Process.fork { `xmessage #{messg} -center -timeout 3` }
+  def stop
+    @running = false
   end
-end
 
-def nil_check(object, time, interval)
-  object.nil? ? false : time - object <= interval
+  private
+
+  def check_exit_status(program)
+    if $?.exitstatus > 0
+      messg = "#{program} ran into an error, exitstatus: #{$?.exitstatus}"
+      `paplay ./dialog-error.ogg`
+      sleep 1
+      Process.fork { `xmessage #{messg} -center -timeout 3` }
+    end
+  end
+
+  def nil_check(object, time, interval)
+    object.nil? ? false : time - object <= interval
+  end
 end

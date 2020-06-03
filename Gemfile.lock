@@ -24,6 +24,7 @@ GEM
       rspec-support (~> 3.9.0)
     rspec-support (3.9.2)
     sync (0.5.0)
+    timecop (0.9.1)
     tins (1.24.0)
       sync
 
@@ -35,6 +36,7 @@ DEPENDENCIES
   open3
   pry
   rspec
+  timecop
 
 BUNDLED WITH
    2.1.2

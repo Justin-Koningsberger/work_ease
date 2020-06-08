@@ -1,6 +1,6 @@
 
 
-require './work_ease'
+require './workease2'
 
 def clean_logs
   inputs = %w[feet keyboard mouse voice]
@@ -44,4 +44,4 @@ bodypart_activity = {
 clean_logs
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB Keyboard', mouse_name: 'VirtualBox mouse integration')
 
-WorkEase.new.start(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: 'inputs/feet', voice_path: 'inputs/voice', testing: true)
+WorkEase.new.start(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: 'inputs/feet', voice_path: 'inputs/voice')

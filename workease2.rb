@@ -11,7 +11,7 @@ class WorkEase
   def initialize
     @warn_log = []
     @testing = false
-    @runnnig = true
+    @running = true
     @pause_until = 0
   end
 
@@ -54,7 +54,7 @@ class WorkEase
     threads << Thread.new { check_feet(feet_path) }
     threads << Thread.new { check_voice(voice_path) }
     threads << Thread.new { check_device(keyboard_id, mouse_id) }
-    # threads << Thread.new { check_slack_call }
+    threads << Thread.new { check_slack_call }
     # threads << Thread.new { overall_activity }
     threads.each(&:join)
   end
@@ -79,7 +79,7 @@ class WorkEase
       next unless line.include?('device:')
 
       device = line.split[1]
-      if [keyboard_id, mouse_id].includes?(device) && ['(ButtonPress)', '(KeyPress)', '(Motion)'].includes?(event)
+      if [keyboard_id, mouse_id].include?(device) && ['(ButtonPress)', '(KeyPress)', '(Motion)'].include?(event)
         check(:hands)
       end
     end
@@ -110,13 +110,66 @@ class WorkEase
     end
   end
 
+  def check_slack_call
+    @call_started = nil
+    @call_ended = nil
+    @last_warning = nil
+    @last_call_duration = 0
+    while @running
+      call_logic
+      sleeptime = @last_warning.nil? ? 60 : 300
+      sleep sleeptime
+    end
+  end
+
+  def call_logic
+    slack_call = slack_call_found?
+    @call_started = Time.now.to_i if slack_call && @call_started.nil?
+    @call_active = true if slack_call
+
+    # when hanging up, store some info about last call
+    if !slack_call && @call_ended.nil? && !@call_started.nil?
+      @call_active = false
+      @call_ended = Time.now.to_i
+      @last_call_duration = @call_ended - @call_started
+    end
+    @call_started = nil if @call_ended && !slack_call
+
+    # reset timers if last call ended more than 10 minutes ago
+    if @call_ended && !slack_call && (@call_ended + 600) <= Time.now.to_i
+      @last_warning = nil
+      @call_ended = nil
+      @last_call_duration = 0
+    end
+
+    # warn if current call, or current plus last call is longer than 45 min
+    if @call_started && Time.now.to_i - @call_started >= 2700 || @call_started && @last_call_duration && (Time.now.to_i - @call_started + @last_call_duration) >= 2700
+      warn('You have been on a call for over 45 minutes, take a 10 minute break')
+      sleep 4
+      rest_timer(600, 'slack_call')
+      @last_warning = Time.now.to_i
+    end
+  end
+
+  private
+
   def rest_timer(time, activity)
     message = "#{activity}-break over"
     return if @testing
+
     Process.fork do
       sleep time
       `paplay ./service-login.ogg`
       `xmessage #{message} -center -timeout 3`
+    end
+  end
+
+  def slack_call_found?
+    xids = `xdotool search --class --classname --name slack`.split("\n")
+    return false if $?.exitstatus > 0
+
+    xids.find do |xid|
+      !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
     end
   end
 

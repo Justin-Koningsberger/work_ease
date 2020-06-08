@@ -31,6 +31,10 @@ RSpec.describe WorkEase do
     @time = Time.at(1591192757)
   end
 
+  after(:each) do
+    Timecop.return
+  end
+
   describe '#start' do
     it 'calls check_inputs with some args' do
       expect(@w).to receive(:check_inputs).with(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
@@ -43,7 +47,7 @@ RSpec.describe WorkEase do
       expect(@w).to receive(:check_feet)
       expect(@w).to receive(:check_voice)
       expect(@w).to receive(:check_device)
-      # expect(@w).to receive(:check_slack_call)
+      expect(@w).to receive(:check_slack_call)
       # expect(@w).to receive(:overall_activity)
       @w.check_inputs(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
     end
@@ -59,7 +63,6 @@ RSpec.describe WorkEase do
 
       var = @w.activity_exceeded?(:voice)
       expect(var).to eq(false)
-      Timecop.return
     end
 
     it 'returns true if bodypart has been too active' do
@@ -92,7 +95,83 @@ RSpec.describe WorkEase do
 
       fixture =  ["2020-06-03 15:59:37 +0200 - You should give your feet a break, wait 5 seconds\n"]
       expect(@w.warn_log).to eq(fixture)
-      Timecop.return
+    end
+  end
+
+  describe '#check_slack_call' do
+    it 'sends a warning if a slack call takes more than 45 minutes' do
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time)
+      @w.call_logic
+      Timecop.freeze(@time + 2701)
+      @w.call_logic
+
+      fixture = ["2020-06-03 16:44:18 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'also warns if two calls together take more than 45 minutes without a 10 min break' do
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time)
+      @w.call_logic
+      allow(@w).to receive(:slack_call_found?).and_return(false)
+      Timecop.freeze(@time + 25 * 60) # 1st call ended after 25 minutes
+      @w.call_logic
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time + 34 * 60) # 2nd call started after 9 minute break
+      @w.call_logic
+      Timecop.freeze(@time + 54 * 60) # 45 minutes total
+      @w.call_logic
+
+      fixture = ["2020-06-03 16:53:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'does not warn if a call take less than 45 minutes' do
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time)
+      @w.call_logic
+      Timecop.freeze(@time + 2699)
+      @w.call_logic
+
+      fixture = []
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'does not warn if two calls take more than 45 minutes if there was a 10 min break' do
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time)
+      @w.call_logic
+      allow(@w).to receive(:slack_call_found?).and_return(false)
+      Timecop.freeze(@time + 25 * 60) # 1st call ended after 25 minutes
+      @w.call_logic
+      Timecop.freeze(@time + 35 * 60) # the method call_logic is usally called in a loop,
+      @w.call_logic # this gives it a chance to reset it's timers
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time + 36 * 60) # 2nd call started after 11 minute break
+      @w.call_logic
+      Timecop.freeze(@time + 60 * 60) # 49 minutes total
+      @w.call_logic
+
+      fixture = []
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'keeps sending warnings every 5 minutes afer a call lasted more than 45 min' do
+      allow(@w).to receive(:slack_call_found?).and_return(true)
+      Timecop.freeze(@time)
+      @w.call_logic
+      Timecop.freeze(@time + 45 * 60)
+      @w.call_logic
+      Timecop.freeze(@time + 50 * 60)
+      @w.call_logic
+      Timecop.freeze(@time + 55 * 60)
+      @w.call_logic
+
+      fixture = ["2020-06-03 16:44:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
+       "2020-06-03 16:49:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
+       "2020-06-03 16:54:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
     end
   end
 end

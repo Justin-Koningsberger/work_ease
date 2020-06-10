@@ -98,7 +98,7 @@ RSpec.describe WorkEase do
     end
   end
 
-  describe '#check_slack_call' do
+  describe '#call_logic' do
     it 'sends a warning if a slack call takes more than 45 minutes' do
       allow(@w).to receive(:slack_call_found?).and_return(true)
       Timecop.freeze(@time)

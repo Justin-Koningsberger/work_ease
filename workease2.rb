@@ -117,8 +117,7 @@ class WorkEase
     @last_call_duration = 0
     while @running
       call_logic
-      sleeptime = @last_warning.nil? ? 60 : 300
-      sleep sleeptime
+      sleep 60
     end
   end
 
@@ -144,6 +143,7 @@ class WorkEase
 
     # warn if current call, or current plus last call is longer than 45 min
     if @call_started && Time.now.to_i - @call_started >= 2700 || @call_started && @last_call_duration && (Time.now.to_i - @call_started + @last_call_duration) >= 2700
+      return if @last_warning && (Time.now.to_i - @last_warning < 300)
       warn('You have been on a call for over 45 minutes, take a 10 minute break')
       sleep 4
       rest_timer(600, 'slack_call')

@@ -246,4 +246,44 @@ RSpec.describe WorkEase do
       expect(@w.warn_log).to eq(fixture)
     end
   end
+
+  describe '#stretch_logic' do
+    it 'warns to stretch after 15 minutes of overall activity' do
+      times = [0, 180, 360, 540, 720, 900, 1080]
+
+      times.each do |t|
+        time = @time + t
+        Timecop.freeze(time)
+        use(:hands, bodypart_activity, time)
+        @w.overall_activity_logic
+      end
+
+      @w.stretch_logic
+      fixture = ["2020-06-03 16:17:17 +0200 - You've been active for 15 minutes, stretch for a bit\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'does not warn after 15 min if there was a 3 minute full break' do
+      times = [0, 180, 360, 540, 720] # 900, 1080
+
+      times.each do |t|
+        time = @time + t
+        Timecop.freeze(time)
+        use(:hands, bodypart_activity, time)
+        @w.overall_activity_logic
+      end
+
+      Timecop.freeze(@time + 901) # 3 minutes, 1 sec after last action reset @last_active
+      @w.overall_activity_logic
+      Timecop.freeze(@time + 930)
+      use(:hands, bodypart_activity, @time + 930)
+      @w.overall_activity_logic
+      Timecop.freeze(@time + 1080)
+      @w.overall_activity_logic
+      @w.stretch_logic
+
+      fixture = []
+      expect(@w.warn_log).to eq(fixture)
+    end
+  end
 end

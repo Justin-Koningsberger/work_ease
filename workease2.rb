@@ -193,8 +193,6 @@ class WorkEase
     end
   end
 
-  private
-
   def was_active?(bodypart_last_active, time)
     bodypart_last_active.nil? ? false : time - bodypart_last_active <= 180
   end

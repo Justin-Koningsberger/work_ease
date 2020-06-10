@@ -35,6 +35,11 @@ RSpec.describe WorkEase do
     Timecop.return
   end
 
+  def use(bodypart, bodypart_activity, time)
+    bodypart_activity[bodypart][:last_activity] = time.to_i
+    @w.bodypart = bodypart_activity
+  end
+
   describe '#start' do
     it 'calls check_inputs with some args' do
       expect(@w).to receive(:check_inputs).with(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
@@ -48,7 +53,7 @@ RSpec.describe WorkEase do
       expect(@w).to receive(:check_voice)
       expect(@w).to receive(:check_device)
       expect(@w).to receive(:check_slack_call)
-      # expect(@w).to receive(:overall_activity)
+      expect(@w).to receive(:overall_activity)
       @w.check_inputs(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
     end
   end
@@ -171,6 +176,73 @@ RSpec.describe WorkEase do
       fixture = ["2020-06-03 16:44:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
        "2020-06-03 16:49:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
        "2020-06-03 16:54:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+  end
+
+  describe '#overall_activity_logic' do
+    it 'sends a warning if overall activity has been high for 50 minutes, without 3 minutes of total inactivity' do
+      @w.interval = 3 * 60
+      times = []
+      for i in (0..17)
+        times << i * 180
+      end
+
+      # one action every 3 minutes for 50 minutes
+      times.each do |t|
+        time = @time + t
+        Timecop.freeze(time)
+        use(:hands, bodypart_activity, time)
+        @w.overall_activity_logic
+      end
+
+      fixture = ["2020-06-03 16:50:17 +0200 - You have been fairly active for 51 minutes, take a ten minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'does not warn if there is a 3 minute full break' do
+      @w.interval = 3 * 60
+      times = [0, 180, 360, 540, 720, 900, 1080, 1260, 1440, 1620, 1800, 1980, 2160, 2340, 2520, 2700]
+
+      # 45 minutes of activity
+      times.each do |t|
+        time = @time + t
+        Timecop.freeze(time)
+        use(:hands, bodypart_activity, time)
+        @w.overall_activity_logic
+      end
+
+      Timecop.freeze(@time + 2881) # let oa logic reset @time_active, 3min, 1 sec since last action
+      @w.overall_activity_logic
+      Timecop.freeze(@time + 2940) # use hands 4 minutes after last action
+      use(:hands, bodypart_activity, @time + 2940)
+      @w.overall_activity_logic
+      Timecop.freeze(@time + 3060) # again use hands 2 minutes after last action
+      use(:hands, bodypart_activity, @time + 3060)
+      @w.overall_activity_logic
+
+      fixture = []
+      expect(@w.warn_log).to eq(fixture)
+    end
+
+    it 'sends a warning every 5 minutes after 50 minutes of overall activity' do
+      @w.interval = 3 * 60
+      times = []
+      for i in (0..21)
+        times << i * 180
+      end
+
+      # one action every 3 minutes for 63 minutes
+      times.each do |t|
+        time = @time + t
+        Timecop.freeze(time)
+        use(:hands, bodypart_activity, time)
+        @w.overall_activity_logic
+      end
+
+      fixture = ["2020-06-03 16:50:17 +0200 - You have been fairly active for 51 minutes, take a ten minute break\n",
+       "2020-06-03 16:56:17 +0200 - You have been fairly active for 57 minutes, take a ten minute break\n",
+       "2020-06-03 17:02:17 +0200 - You have been fairly active for 63 minutes, take a ten minute break\n"]
       expect(@w.warn_log).to eq(fixture)
     end
   end

@@ -6,7 +6,7 @@ require 'time'
 require 'open3'
 
 class WorkEase
-  attr_accessor :bodypart, :testing, :warn_log
+  attr_accessor :bodypart, :testing, :warn_log, :interval
 
   def initialize
     @warn_log = []
@@ -55,7 +55,7 @@ class WorkEase
     threads << Thread.new { check_voice(voice_path) }
     threads << Thread.new { check_device(keyboard_id, mouse_id) }
     threads << Thread.new { check_slack_call }
-    # threads << Thread.new { overall_activity }
+    threads << Thread.new { overall_activity }
     threads.each(&:join)
   end
 
@@ -151,7 +151,53 @@ class WorkEase
     end
   end
 
+  def overall_activity
+    @time_active = nil
+    @stretch_timer = nil
+    while @running
+      overall_activity_logic
+      stretch_logic
+
+      sleep 1
+    end
+  end
+
+  def overall_activity_logic
+    time = Time.now.to_i
+    return if @time_active && time - @time_active < 3 * 60
+
+    feet_active = was_active?(@bodypart[:feet][:last_activity], time)
+    hands_active = was_active?(@bodypart[:hands][:last_activity], time)
+    voice_active = was_active?(@bodypart[:voice][:last_activity], time)
+    call_active = @call_active.nil? ? false : @call_active
+
+    if feet_active || hands_active || voice_active || call_active
+      @time_active = Time.now.to_i if @time_active.nil?
+      @stretch_timer = Time.now.to_i if @stretch_timer.nil?
+    else
+      @time_active = nil
+      @stretch_timer = nil
+    end
+
+    if @time_active && time - @time_active >= 50 * 60
+      return if @last_oa_warning && (Time.now - @last_oa_warning < 300)
+      messg = "You have been fairly active for #{(time - @time_active) / 60} minutes, take a ten minute break"
+      warn(messg)
+      @last_oa_warning = Time.now
+    end
+  end
+
+  def stretch_logic
+    if @stretch_timer && Time.now.to_i - @stretch_timer >= 15 * 60
+      warn("You've been active for 15 minutes, stretch for a bit")
+    end
+  end
+
   private
+
+  def was_active?(bodypart_last_active, time)
+    bodypart_last_active.nil? ? false : time - bodypart_last_active <= 180
+  end
 
   def rest_timer(time, activity)
     message = "#{activity}-break over"

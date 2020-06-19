@@ -26,7 +26,7 @@ keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB 
 
 RSpec.describe WorkEase do
   before(:each) do
-    @w = WorkEase.new
+    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', voice_path: '../inputs/voice')
     @w.testing = true
     @time = Time.at(1591192757)
   end
@@ -35,46 +35,32 @@ RSpec.describe WorkEase do
     Timecop.return
   end
 
-  def use(bodypart, bodypart_activity, time)
-    bodypart_activity[bodypart][:last_activity] = time.to_i
-    @w.bodypart = bodypart_activity
-  end
-
   describe '#start' do
-    it 'calls check_inputs with some args' do
-      expect(@w).to receive(:check_inputs).with(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
-      @w.start(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', voice_path: '../inputs/voice')
-    end
-  end
-
-  describe '#check_inputs' do
     it 'starts threads running all checks' do
       expect(@w).to receive(:check_feet)
       expect(@w).to receive(:check_voice)
       expect(@w).to receive(:check_device)
       expect(@w).to receive(:check_slack_call)
       expect(@w).to receive(:overall_activity)
-      @w.check_inputs(keyboard_id, mouse_id, '../inputs/feet', '../inputs/voice')
+      @w.start
     end
   end
 
   describe '#activity_exceeded?' do
     it 'returns false if bodypart has not been too active' do
       Timecop.freeze(@time)
-      bodypart_activity[:voice][:activity_level] = 1
-      bodypart_activity[:voice][:high_activity_start] = @time.to_i - 19
-      bodypart_activity[:voice][:last_activity] = @time.to_i
-      @w.bodypart = bodypart_activity
+      @w.bodypart[:voice][:activity_level] = 1
+      @w.bodypart[:voice][:high_activity_start] = @time.to_i - 19
+      @w.bodypart[:voice][:last_activity] = @time.to_i
 
       var = @w.activity_exceeded?(:voice)
       expect(var).to eq(false)
     end
 
     it 'returns true if bodypart has been too active' do
-      bodypart_activity[:voice][:activity_level] = 1
-      bodypart_activity[:voice][:high_activity_start] = @time.to_i - 20
-      bodypart_activity[:voice][:last_activity] = @time.to_i
-      @w.bodypart = bodypart_activity
+      @w.bodypart[:voice][:activity_level] = 1
+      @w.bodypart[:voice][:high_activity_start] = @time.to_i - 20
+      @w.bodypart[:voice][:last_activity] = @time.to_i
 
       var = @w.activity_exceeded?(:voice)
       expect(var).to eq(true)
@@ -83,7 +69,6 @@ RSpec.describe WorkEase do
 
   describe '#check' do
     it 'sends a warning if bodypart has been too active' do
-      @w.bodypart = bodypart_activity
 
       Timecop.freeze(@time)
       @w.check(:feet)
@@ -150,8 +135,8 @@ RSpec.describe WorkEase do
       allow(@w).to receive(:slack_call_found?).and_return(false)
       Timecop.freeze(@time + 25 * 60) # 1st call ended after 25 minutes
       @w.call_logic
-      Timecop.freeze(@time + 35 * 60) # the method call_logic is usally called in a loop,
-      @w.call_logic # this gives it a chance to reset it's timers
+      Timecop.freeze(@time + 35 * 60) # the method call_logic is usually called in a loop,
+      @w.call_logic # this gives it a chance to reset its timers
       allow(@w).to receive(:slack_call_found?).and_return(true)
       Timecop.freeze(@time + 36 * 60) # 2nd call started after 11 minute break
       @w.call_logic
@@ -192,7 +177,7 @@ RSpec.describe WorkEase do
       times.each do |t|
         time = @time + t
         Timecop.freeze(time)
-        use(:hands, bodypart_activity, time)
+        @w.check(:hands)
         @w.overall_activity_logic
       end
 
@@ -208,17 +193,17 @@ RSpec.describe WorkEase do
       times.each do |t|
         time = @time + t
         Timecop.freeze(time)
-        use(:hands, bodypart_activity, time)
+        @w.check(:hands)
         @w.overall_activity_logic
       end
 
       Timecop.freeze(@time + 2881) # let oa logic reset @time_active, 3min, 1 sec since last action
       @w.overall_activity_logic
       Timecop.freeze(@time + 2940) # use hands 4 minutes after last action
-      use(:hands, bodypart_activity, @time + 2940)
+      @w.check(:hands)
       @w.overall_activity_logic
       Timecop.freeze(@time + 3060) # again use hands 2 minutes after last action
-      use(:hands, bodypart_activity, @time + 3060)
+      @w.check(:hands)
       @w.overall_activity_logic
 
       fixture = []
@@ -236,7 +221,7 @@ RSpec.describe WorkEase do
       times.each do |t|
         time = @time + t
         Timecop.freeze(time)
-        use(:hands, bodypart_activity, time)
+        @w.check(:hands)
         @w.overall_activity_logic
       end
 
@@ -254,7 +239,7 @@ RSpec.describe WorkEase do
       times.each do |t|
         time = @time + t
         Timecop.freeze(time)
-        use(:hands, bodypart_activity, time)
+        @w.check(:hands)
         @w.overall_activity_logic
       end
 
@@ -269,14 +254,14 @@ RSpec.describe WorkEase do
       times.each do |t|
         time = @time + t
         Timecop.freeze(time)
-        use(:hands, bodypart_activity, time)
+        @w.check(:hands)
         @w.overall_activity_logic
       end
 
       Timecop.freeze(@time + 901) # 3 minutes, 1 sec after last action reset @last_active
       @w.overall_activity_logic
       Timecop.freeze(@time + 930)
-      use(:hands, bodypart_activity, @time + 930)
+      @w.check(:hands)
       @w.overall_activity_logic
       Timecop.freeze(@time + 1080)
       @w.overall_activity_logic

@@ -1,24 +1,24 @@
 #! /usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative 'workease2.rb'
+require_relative 'workease.rb'
 
 bodypart_activity = {
   feet: { last_activity: nil,
-          activity_level: 0,
+          active?: false,
           min_rest: 60,
           max_exertion: 600,
-          high_activity_start: nil },
+          activity_start: nil },
   hands: { last_activity: nil,
            min_rest: 5,
-           activity_level: 0,
+           active?: false,
            max_exertion: 10,
-           high_activity_start: nil },
+           activity_start: nil },
   voice: { last_activity: nil,
            min_rest: 30,
-           activity_level: 0,
+           active?: false,
            max_exertion: 120,
-           high_activity_start: nil }
+           activity_start: nil }
 }
 
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'AT Translated Set 2 keyboard', mouse_name: 'SynPS/2 Synaptics TouchPad')

@@ -1,24 +1,24 @@
 #! /usr/bin/env ruby
 # frozen_string_literal: true
 
-require_relative 'workease2.rb'
+require_relative 'workease.rb'
 
 bodypart_activity = {
   feet: { last_activity: nil,
-          activity_level: 0,
+          active?: false,
           min_rest: 5,
           max_exertion: 50,
-          high_activity_start: nil },
+          activity_start: nil },
   hands: { last_activity: nil,
            min_rest: 5,
-           activity_level: 0,
+           active?: false,
            max_exertion: 10,
-           high_activity_start: nil },
+           activity_start: nil },
   voice: { last_activity: nil,
            min_rest: 10,
-           activity_level: 0,
+           active?: false,
            max_exertion: 20,
-           high_activity_start: nil }
+           activity_start: nil }
 }
 
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB Keyboard', mouse_name: 'VirtualBox mouse integration')

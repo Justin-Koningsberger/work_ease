@@ -3,17 +3,25 @@
 
 require 'active_support/time'
 require 'file-tail'
+require 'shellwords'
 require 'time'
 require 'open3'
 
 class WorkEase
-  attr_accessor :bodypart, :testing, :warn_log, :interval, :semaphore
+  attr_accessor :state, :testing, :warn_log, :semaphore
 
+  OVERALL_ACTIVITY_INTERVAL = 3.minutes
+  OVERALL_ACTIVITY_LIMIT = 50.minutes
+  OVERALL_ACTIVITY_WARNING_SNOOZE = 5.minutes
   TAIL_INTERVAL = 0.1
-  SLACK_CALL_CHECK_INTERVAL = 1.minute
+  SLACK_CALL_INTERVAL = 1.minute
+  SLACK_CALL_LIMIT = 45.minutes
+  SLACK_REST_TIME = 10.minutes
+  SLACK_WARNING_SNOOZE = 5.minutes
+  STRETCH_TIME = 15.minutes
 
   def initialize(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:)
-    @bodypart = bodypart_activity
+    @state = bodypart_activity
     @feet_path = feet_path
     @keyboard_id = keyboard_id
     @mouse_id = mouse_id
@@ -54,15 +62,15 @@ class WorkEase
     [@keyboard_id, @mouse_id]
   end
 
-  def activity_exceeded?(b)
+  def activity_exceeded?(part)
     time = Time.now.to_i
     unless @testing
-      puts "level #{@bodypart[b][:activity_level]}"
-      puts "time active #{time - @bodypart[b][:high_activity_start]}"
+      puts "active: #{@state[part][:active?]}"
+      puts "#{part}-time active: #{time - @state[part][:activity_start]}"
     end
-    @bodypart[b][:activity_level] == 1 &&
-      time - @bodypart[b][:high_activity_start] > @bodypart[b][:max_exertion] &&
-      time > @bodypart[b][:last_activity]
+    @state[part][:active?] &&
+      time - @state[part][:activity_start] > @state[part][:max_exertion] &&
+      time > @state[part][:last_activity]
   end
 
   def check_feet(feet_path)
@@ -91,27 +99,27 @@ class WorkEase
     end
   end
 
-  def check(b)
+  def check(part)
     @semaphore.synchronize do
       time = Time.now.to_i
-      @bodypart[b][:last_activity] = time if @bodypart[b][:last_activity].nil?
+      @state[part][:last_activity] = time if @state[part][:last_activity].nil?
 
-      if time - @bodypart[b][:last_activity] < @bodypart[b][:min_rest]
-        if @bodypart[b][:activity_level] == 0
-          @bodypart[b][:high_activity_start] = @bodypart[b][:last_activity]
+      if time - @state[part][:last_activity] < @state[part][:min_rest]
+        unless @state[part][:active?]
+          @state[part][:activity_start] = @state[part][:last_activity]
         end
-        @bodypart[b][:activity_level] = 1
+        @state[part][:active?] = true
       else
-        @bodypart[b][:activity_level] = 0
-        @bodypart[b][:high_activity_start] = 0
+        @state[part][:active?] = false
+        @state[part][:activity_start] = 0
       end
 
-      if activity_exceeded?(b)
-        warn("You should give your #{b} a break, wait #{@bodypart[b][:min_rest]} seconds")
-        rest_timer(@bodypart[b][:min_rest], b)
+      if activity_exceeded?(part)
+        warn("You should give your #{part} a break, wait #{@state[part][:min_rest]} seconds")
+        rest_timer(@state[part][:min_rest], part)
       end
 
-      @bodypart[b][:last_activity] = time
+      @state[part][:last_activity] = time
     end
   end
 
@@ -122,7 +130,7 @@ class WorkEase
     @last_call_duration = 0
     while @running
       call_logic
-      sleep SLACK_CALL_CHECK_INTERVAL
+      sleep SLACK_CALL_INTERVAL
     end
   end
 
@@ -140,18 +148,20 @@ class WorkEase
     @call_started = nil if @call_ended && !slack_call
 
     # reset timers if last call ended more than 10 minutes ago
-    if @call_ended && !slack_call && (@call_ended + 600) <= Time.now.to_i
+    if @call_ended && !slack_call && (@call_ended + SLACK_REST_TIME) <= Time.now.to_i
       @last_warning = nil
       @call_ended = nil
       @last_call_duration = 0
     end
 
     # warn if current call, or current plus last call is longer than 45 min
-    if @call_started && Time.now.to_i - @call_started >= 2700 || @call_started && @last_call_duration && (Time.now.to_i - @call_started + @last_call_duration) >= 2700
-      return if @last_warning && (Time.now.to_i - @last_warning < 300)
+    if @call_started && Time.now.to_i - @call_started >= SLACK_CALL_LIMIT || @call_started && @last_call_duration && (Time.now.to_i - @call_started + @last_call_duration) >= SLACK_CALL_LIMIT
+      if @last_warning && (Time.now.to_i - @last_warning < SLACK_WARNING_SNOOZE)
+        return
+      end
+
       warn('You have been on a call for over 45 minutes, take a 10 minute break')
-      sleep 4
-      rest_timer(600, 'slack_call')
+      rest_timer(SLACK_REST_TIME, 'slack_call')
       @last_warning = Time.now.to_i
     end
   end
@@ -169,11 +179,11 @@ class WorkEase
 
   def overall_activity_logic
     time = Time.now.to_i
-    return if @time_active && time - @time_active < 3 * 60
+    return if @time_active && time - @time_active < OVERALL_ACTIVITY_INTERVAL
 
-    feet_active = was_active?(@bodypart[:feet][:last_activity], time)
-    hands_active = was_active?(@bodypart[:hands][:last_activity], time)
-    voice_active = was_active?(@bodypart[:voice][:last_activity], time)
+    feet_active = was_active?(@state[:feet][:last_activity], time)
+    hands_active = was_active?(@state[:hands][:last_activity], time)
+    voice_active = was_active?(@state[:voice][:last_activity], time)
     call_active = @call_active.nil? ? false : @call_active
 
     if feet_active || hands_active || voice_active || call_active
@@ -184,8 +194,11 @@ class WorkEase
       @stretch_timer = nil
     end
 
-    if @time_active && time - @time_active >= 50 * 60
-      return if @last_oa_warning && (Time.now - @last_oa_warning < 300)
+    if @time_active && time - @time_active >= OVERALL_ACTIVITY_LIMIT
+      if @last_oa_warning && Time.now - @last_oa_warning < OVERALL_ACTIVITY_WARNING_SNOOZE
+        return
+      end
+
       messg = "You have been fairly active for #{(time - @time_active) / 60} minutes, take a ten minute break"
       warn(messg)
       @last_oa_warning = Time.now
@@ -193,13 +206,15 @@ class WorkEase
   end
 
   def stretch_logic
-    if @stretch_timer && Time.now.to_i - @stretch_timer >= 15 * 60
+    if @stretch_timer && Time.now.to_i - @stretch_timer >= STRETCH_TIME
       warn("You've been active for 15 minutes, stretch for a bit")
     end
   end
 
+  private
+
   def was_active?(bodypart_last_active, time)
-    bodypart_last_active.nil? ? false : time - bodypart_last_active <= 180
+    bodypart_last_active.nil? ? false : time - bodypart_last_active <= OVERALL_ACTIVITY_INTERVAL
   end
 
   def rest_timer(time, activity)

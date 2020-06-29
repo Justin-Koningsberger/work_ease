@@ -67,21 +67,23 @@ RSpec.describe WorkEase do
   describe '#activity_exceeded?' do
     it 'returns false if bodypart has not been too active' do
       set_time(0)
+      exertion_limit = @w.state[:voice][:max_exertion]
       @w.state[:voice][:active?] = true
-      @w.state[:voice][:activity_start] = @time.to_i - 19
+      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit - 1
       @w.state[:voice][:last_activity] = @time.to_i
 
-      var = @w.activity_exceeded?(:voice)
-      expect(var).to eq(false)
+      result = @w.activity_exceeded?(:voice)
+      expect(result).to eq(false)
     end
 
     it 'returns true if bodypart has been too active' do
+      exertion_limit = @w.state[:voice][:max_exertion]
       @w.state[:voice][:active?] = true
-      @w.state[:voice][:activity_start] = @time.to_i - 20
+      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit
       @w.state[:voice][:last_activity] = @time.to_i
 
-      var = @w.activity_exceeded?(:voice)
-      expect(var).to eq(true)
+      result = @w.activity_exceeded?(:voice)
+      expect(result).to eq(true)
     end
   end
 
@@ -210,9 +212,8 @@ RSpec.describe WorkEase do
 
   describe '@semaphore' do
     it 'locks mutex when in check method' do
-      set_time(0)
-      Thread.new { @w.check(:hands); expect(@w.semaphore.locked?).to be(true) }
-      expect(@w.semaphore.locked?).to be(false)
+      expect(@w.semaphore).to receive(:synchronize)
+      @w.check(:hands)
     end
   end
 end

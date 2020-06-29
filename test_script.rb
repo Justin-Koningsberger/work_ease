@@ -23,15 +23,11 @@ bodypart_activity = {
 }
 
 if ARGV.empty?
-  puts "Settings profile argument missing.\n\r"
-  ARGV << '-h'
+  puts "Profile setting argument missing, -h for help, starting in standard profile."
 end
 
 OptionParser.new do |opts|
   opts.banner = 'Usage: ./test_script.rb [option], do not use more than 1 option, or they will override each other'
-
-  opts.on('-0', '--profile-0', 'Standard profile') do |_o|
-  end
 
   opts.on('-1', '--profile-1', 'Barely any typing') do |_o|
     bodypart_activity[:hands][:min_rest] = 10

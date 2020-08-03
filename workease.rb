@@ -208,6 +208,7 @@ class WorkEase
   def stretch_logic
     if @stretch_timer && Time.now.to_i - @stretch_timer >= STRETCH_TIME
       warn("You've been active for 15 minutes, stretch for a bit")
+      @stretch_timer = Time.now.to_i
     end
   end
 

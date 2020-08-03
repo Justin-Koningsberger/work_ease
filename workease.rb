@@ -221,11 +221,12 @@ class WorkEase
     message = "#{activity}-break over"
     return if @testing
 
-    Process.fork do
+    pid = Process.fork do
       sleep time
       `paplay ./sounds/service-login.ogg`
       `xmessage #{message} -center -timeout 3`
     end
+    Process.detach(pid)
   end
 
   def slack_call_found?
@@ -245,7 +246,10 @@ class WorkEase
       `paplay ./sounds/when.ogg`
       @pause_until = Time.now.to_i + 5
       sleep 1
-      Process.fork { `xmessage #{Shellwords.escape(reason)} -center -timeout 3` }
+      pid = Process.fork do
+        `xmessage #{Shellwords.escape(reason)} -center -timeout 3`
+      end
+      Process.detach(pid)
       File.open('testlog', 'a') { |f| f << "#{reason}\n" }
     end
   end

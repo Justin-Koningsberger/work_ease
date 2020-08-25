@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'active_support/time'
+require 'English'
 require 'file-tail'
 require 'shellwords'
 require 'time'
@@ -233,7 +234,7 @@ class WorkEase
 
   def slack_call_found?
     xids = `xdotool search --class --classname --name slack`.split("\n")
-    return false if $?.exitstatus > 0
+    return false if $CHILD_STATUS.exitstatus > 0
 
     xids.find do |xid|
       !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?

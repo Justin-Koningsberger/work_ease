@@ -102,6 +102,8 @@ class WorkEase
   def check(part)
     @semaphore.synchronize do
       time = Time.now.to_i
+      next if time < @pause_until
+
       @state[part][:last_activity] = time if @state[part][:last_activity].nil?
 
       if time - @state[part][:last_activity] < @state[part][:min_rest]
@@ -111,7 +113,7 @@ class WorkEase
         @state[part][:active?] = true
       else
         @state[part][:active?] = false
-        @state[part][:activity_start] = 0
+        @state[part][:activity_start] = time
       end
 
       if activity_exceeded?(part)
@@ -224,7 +226,7 @@ class WorkEase
     pid = Process.fork do
       sleep time
       `paplay ./sounds/service-login.ogg`
-      `xmessage #{message} -center -timeout 3`
+      `xmessage #{message} -center -timeout 2`
     end
     Process.detach(pid)
   end
@@ -244,7 +246,7 @@ class WorkEase
       @warn_log << message
     elsif Time.now.to_i > @pause_until
       `paplay ./sounds/when.ogg`
-      @pause_until = Time.now.to_i + 5
+      @pause_until = Time.now.to_i + 2
       sleep 1
       pid = Process.fork do
         `xmessage #{Shellwords.escape(reason)} -center -timeout 3`

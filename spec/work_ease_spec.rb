@@ -95,6 +95,21 @@ RSpec.describe WorkEase do
       fixture = ["2020-06-03 15:59:37 +0200 - You should give your feet a break, wait 5 seconds\n"]
       expect(@w.warn_log).to eq(fixture)
     end
+
+    it 'when bodypart has had enough rest, sets active? to false and activity_start to Time.now' do
+      set_time(0.seconds)
+      @w.check(:hands)
+      set_time(4.seconds)
+      @w.check(:hands)
+      set_time(8.seconds)
+      @w.check(:hands)
+      # 5 seconds is enough rest for hands
+      set_time(13.seconds)
+      @w.check(:hands)
+
+      expect(@w.state[:hands][:active?]).to be false
+      expect(@w.state[:hands][:activity_start]).to eq(Time.now.to_i)
+    end
   end
 
   describe '#call_logic' do

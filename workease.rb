@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 
 require 'active_support/time'
+require 'English'
 require 'file-tail'
 require 'shellwords'
 require 'time'
@@ -102,6 +103,8 @@ class WorkEase
   def check(part)
     @semaphore.synchronize do
       time = Time.now.to_i
+      next if time < @pause_until
+
       @state[part][:last_activity] = time if @state[part][:last_activity].nil?
 
       if time - @state[part][:last_activity] < @state[part][:min_rest]
@@ -111,7 +114,7 @@ class WorkEase
         @state[part][:active?] = true
       else
         @state[part][:active?] = false
-        @state[part][:activity_start] = 0
+        @state[part][:activity_start] = time
       end
 
       if activity_exceeded?(part)
@@ -224,15 +227,15 @@ class WorkEase
 
     pid = Process.fork do
       sleep time
-      `paplay --volume 30000 ./sounds/service-login.ogg`
-      `xmessage #{message} -center -timeout 3`
+      `paplay ./sounds/service-login.ogg`
+      `xmessage #{message} -center -timeout 2`
     end
     Process.detach(pid)
   end
 
   def slack_call_found?
     xids = `xdotool search --class --classname --name slack`.split("\n")
-    return false if $?.exitstatus > 0
+    return false if $CHILD_STATUS.exitstatus > 0
 
     xids.find do |xid|
       !`xwininfo -all -id "#{xid}"| grep "Slack call with"`.strip.empty?
@@ -244,8 +247,8 @@ class WorkEase
       message = "#{Time.now} - #{reason}\n"
       @warn_log << message
     elsif Time.now.to_i > @pause_until
-      `paplay --volume 30000 ./sounds/when.ogg`
-      @pause_until = Time.now.to_i + 5
+      `paplay ./sounds/when.ogg`
+      @pause_until = Time.now.to_i + 2
       sleep 1
       pid = Process.fork do
         `xmessage #{Shellwords.escape(reason)} -center -timeout 3`

@@ -16,7 +16,7 @@ class WorkEase
   OVERALL_ACTIVITY_WARNING_SNOOZE = 5.minutes
   TAIL_INTERVAL = 0.1
   SLACK_CALL_INTERVAL = 1.minute
-  SLACK_CALL_LIMIT = 45.minutes
+  SLACK_CALL_LIMIT = 28.minutes
   SLACK_REST_TIME = 10.minutes
   SLACK_WARNING_SNOOZE = 5.minutes
   STRETCH_TIME = 15.minutes
@@ -227,7 +227,7 @@ class WorkEase
 
     pid = Process.fork do
       sleep time
-      `paplay ./sounds/service-login.ogg`
+      `paplay --volume 30000 ./sounds/service-login.ogg`
       `xmessage #{message} -center -timeout 2`
     end
     Process.detach(pid)
@@ -247,7 +247,7 @@ class WorkEase
       message = "#{Time.now} - #{reason}\n"
       @warn_log << message
     elsif Time.now.to_i > @pause_until
-      `paplay ./sounds/when.ogg`
+      `paplay --volume 30000 ./sounds/when.ogg`
       @pause_until = Time.now.to_i + 2
       sleep 1
       pid = Process.fork do

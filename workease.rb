@@ -32,6 +32,7 @@ class WorkEase
     @testing = false
     @voice_path = voice_path
     @warn_log = []
+    @inactive_for_hour = false
   end
 
   def start
@@ -205,6 +206,29 @@ class WorkEase
       messg = "You have been fairly active for #{(time - @time_active) / 60} minutes, take a ten minute break"
       warn(messg)
       @last_oa_warning = Time.now
+    end
+
+    profile_reminder
+  end
+
+  def profile_reminder
+    time = Time.now.to_i
+    feet = @state[:feet][:last_activity]
+    hands = @state[:hands][:last_activity]
+    voice = @state[:voice][:last_activity]
+    if (!feet.nil? && feet + 3600 < time) ||
+      (!hands.nil? && hands + 3600 < time) ||
+      (!voice.nil? && hands + 3600 < time)
+        @inactive_for_hour = true
+    end
+
+    if @inactive_for_hour &&
+      time - @time_active > 5.minutes &&
+      (@state[:feet][:active?] ||
+      @state[:hands][:active?] ||
+      @state[:voice][:active?])
+        warn( "You have resumed after a period of inactivity, is settings profile [#{state[:profile]}] still correct?")
+        @inactive_for_hour = false
     end
   end
 

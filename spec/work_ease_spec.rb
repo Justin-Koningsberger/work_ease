@@ -6,6 +6,7 @@ require 'active_support/time'
 require 'timecop'
 
 bodypart_activity = {
+  profile: 'standard',
   feet: { last_activity: nil,
           active?: false,
           min_rest: 5,
@@ -198,6 +199,19 @@ RSpec.describe WorkEase do
       fixture = ["2020-06-03 16:50:17 +0200 - You have been fairly active for 51 minutes, take a ten minute break\n",
                  "2020-06-03 16:56:17 +0200 - You have been fairly active for 57 minutes, take a ten minute break\n",
                  "2020-06-03 17:02:17 +0200 - You have been fairly active for 63 minutes, take a ten minute break\n"]
+      expect(@w.warn_log).to eq(fixture)
+    end
+  end
+
+  describe '#profile_reminder' do
+    it "reminds you which profile you're on after an hour of inactivity" do
+      simulate_activity(:hands, [1.minute])
+      set_time(3661) #3601 seconds later
+      @w.profile_reminder # sets @inactive_for_hour to true
+      simulate_activity(:feet, [2.minutes])
+
+      fixture = ["2020-06-03 17:00:18 +0200 - You have resumed after a period of inactivity, is settings profile [standard] still correct?\n"]
+
       expect(@w.warn_log).to eq(fixture)
     end
   end

@@ -5,6 +5,7 @@ require 'optparse'
 require_relative 'workease.rb'
 
 bodypart_activity = {
+  profile: 'standard',
   feet: { last_activity: nil,
           active?: false,
           min_rest: 5,
@@ -30,6 +31,7 @@ OptionParser.new do |opts|
   opts.banner = 'Usage: ./test_script.rb [option], do not use more than 1 option, because they can override each other'
 
   opts.on('-1', '--profile-1', 'Barely any use of hands, higher threshold for other activity') do |_o|
+    bodypart_activity[:profile] = 'profile-1'
     bodypart_activity[:hands][:min_rest] = 10
     bodypart_activity[:hands][:max_exertion] = 5
     bodypart_activity[:feet][:min_rest] = 3
@@ -39,6 +41,7 @@ OptionParser.new do |opts|
   end
 
   opts.on('-2', '--profile-2', 'Limited voice activity, higher threshold for other activity') do |_o|
+    bodypart_activity[:profile] = 'profile-2'
     bodypart_activity[:voice][:min_rest] = 20
     bodypart_activity[:voice][:max_exertion] = 10
     bodypart_activity[:feet][:min_rest] = 3
@@ -48,6 +51,7 @@ OptionParser.new do |opts|
   end
 
   opts.on('-3', '--profile-3', 'Limit feet pedal activity, higher threshold for other activity') do |_o|
+    bodypart_activity[:profile] = 'profile-3'
     bodypart_activity[:feet][:min_rest] = 10
     bodypart_activity[:feet][:max_exertion] = 25
     bodypart_activity[:voice][:min_rest] = 5
@@ -57,6 +61,7 @@ OptionParser.new do |opts|
   end
 
   opts.on('-4', '--profile-4', 'Burst of feet activity, requires long break') do |_o|
+    bodypart_activity[:profile] = 'profile-4'
     bodypart_activity[:feet][:min_rest] = 3600
     bodypart_activity[:feet][:max_exertion] = 600
   end

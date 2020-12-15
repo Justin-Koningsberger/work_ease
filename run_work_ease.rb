@@ -67,6 +67,6 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'AT Translated Set 2 keyboard', mouse_name: 'SynPS/2 Synaptics TouchPad')
+keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'AT Translated Set 2 keyboard', mouse_name: 'PNP0C50:00 2808:0101 Touchpad')
 
 WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: "#{ENV['HOME']}/code/midityper/log", voice_path: "#{ENV['HOME']}/code/speech/log").start

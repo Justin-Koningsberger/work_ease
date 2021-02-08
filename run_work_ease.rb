@@ -16,6 +16,11 @@ bodypart_activity = {
            active?: false,
            max_exertion: 10,
            activity_start: nil },
+  talon: { last_activity: nil,
+           min_rest: 180,
+           active?: false,
+           max_exertion: 1800,
+           activity_start: nil },
   voice: { last_activity: nil,
            min_rest: 30,
            active?: false,
@@ -24,11 +29,11 @@ bodypart_activity = {
 }
 
 if ARGV.empty?
-  puts "Profile setting argument missing, -h for help, starting in standard profile."
+  puts 'Profile setting argument missing, -h for help, starting in standard profile.'
 end
 
 OptionParser.new do |opts|
-  opts.banner = 'Usage: ./test_script.rb [option], do not use more than 1 option, or they will override each other'
+  opts.banner = 'Usage: ./run_work_ease.rb [option], do not use more than 1 option, or they will override each other'
 
   opts.on('-1', '--profile-1', 'Barely any use of hands, higher threshold for other activity') do |_o|
     bodypart_activity[:profile] = 'profile-1'
@@ -74,4 +79,4 @@ end.parse!
 
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'AT Translated Set 2 keyboard', mouse_name: 'SynPS/2 Synaptics TouchPad')
 
-WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: "#{ENV['HOME']}/code/midityper/log", voice_path: "#{ENV['HOME']}/code/speech/log").start
+WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: "#{ENV['HOME']}/code/midityper/log", talon_path: "#{ENV['HOME']}/code/workease/talon_log.txt", voice_path: "#{ENV['HOME']}/code/speech/log").start

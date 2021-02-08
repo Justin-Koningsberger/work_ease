@@ -17,6 +17,11 @@ bodypart_activity = {
            active?: false,
            max_exertion: 10,
            activity_start: nil },
+  talon: { last_activity: nil,
+           min_rest: 180,
+           active?: false,
+           max_exertion: 1800,
+           activity_start: nil },
   voice: { last_activity: nil,
            min_rest: 10,
            active?: false,
@@ -28,7 +33,7 @@ keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB 
 
 RSpec.describe WorkEase do
   before(:each) do
-    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', voice_path: '../inputs/voice')
+    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', talon_path: "#{ENV['HOME']}/code/workease/talon_log.txt", voice_path: '../inputs/voice')
     @w.testing = true
     @time = Time.at(1_591_192_757)
   end
@@ -206,7 +211,7 @@ RSpec.describe WorkEase do
   describe '#profile_reminder' do
     it "reminds you which profile you're on after an hour of inactivity" do
       simulate_activity(:hands, [1.minute])
-      set_time(3661) #3601 seconds later
+      set_time(3661) # 3601 seconds later
       @w.profile_reminder # sets @inactive_for_hour to true
       simulate_activity(:feet, [2.minutes])
 
@@ -236,6 +241,29 @@ RSpec.describe WorkEase do
 
       fixture = []
       expect(@w.warn_log).to eq(fixture)
+    end
+  end
+
+  describe '@#talon_check' do
+    it 'returns true if talon zoom mouse was too active' do
+      exertion_limit = @w.state[:talon][:max_exertion]
+      @w.state[:talon][:active?] = true
+      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit
+      @w.state[:talon][:last_activity] = @time.to_i
+
+      result = @w.activity_exceeded?(:talon)
+      expect(result).to eq(true)
+    end
+
+    it 'returns false if talon zoom mouse was not too active' do
+      set_time(0)
+      exertion_limit = @w.state[:talon][:max_exertion]
+      @w.state[:talon][:active?] = true
+      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit - 1
+      @w.state[:talon][:last_activity] = @time.to_i
+
+      result = @w.activity_exceeded?(:talon)
+      expect(result).to eq(false)
     end
   end
 

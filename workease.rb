@@ -21,7 +21,7 @@ class WorkEase
   SLACK_WARNING_SNOOZE = 5.minutes
   STRETCH_TIME = 15.minutes
 
-  def initialize(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:)
+  def initialize(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, talon_path:, voice_path:)
     @state = bodypart_activity
     @feet_path = feet_path
     @keyboard_id = keyboard_id
@@ -29,6 +29,7 @@ class WorkEase
     @pause_until = 0
     @running = true
     @semaphore = Mutex.new
+    @talon_path = talon_path
     @testing = false
     @voice_path = voice_path
     @warn_log = []
@@ -42,6 +43,7 @@ class WorkEase
     threads << Thread.new { check_device(@keyboard_id, @mouse_id) }
     threads << Thread.new { check_slack_call }
     threads << Thread.new { overall_activity }
+    threads << Thread.new { check_talon(@talon_path) }
     threads.each(&:join)
   end
 
@@ -77,6 +79,12 @@ class WorkEase
   def check_feet(feet_path)
     File::Tail::Logfile.tail(feet_path, backward: 1, interval: TAIL_INTERVAL) do |_line|
       check(:feet)
+    end
+  end
+
+  def check_talon(talon_path)
+    File::Tail::Logfile.tail(talon_path, backward: 1, interval: TAIL_INTERVAL) do |line|
+      check_talon(line)
     end
   end
 
@@ -134,6 +142,30 @@ class WorkEase
     while @running
       call_logic
       sleep SLACK_CALL_INTERVAL
+    end
+  end
+
+  def check_talon(line)
+    if line.start_with?('Pop sound at ')
+      time = Time.at(line.slice('Pop sound at ')).to_i
+      @state[:talon][:last_activity] = time if @state[:talon][:last_activity].nil?
+
+      if time - @state[:talon][:last_activity] < @state[:talon][:min_rest]
+        unless @state[:talon][:active?]
+          @state[:talon][:activity_start] = @state[:talon][:last_activity]
+        end
+        @state[:talon][:active?] = true
+      else
+        @state[:talon][:active?] = false
+        @state[:talon][:activity_start] = time
+      end
+
+      if activity_exceeded?(:talon)
+        warn("Over 30 minutes active with zoom mouse, wait #{@state[:talon][:min_rest]} seconds")
+        rest_timer(@state[:talon][:min_rest], :talon)
+      end
+
+      @state[:talon][:last_activity] = time
     end
   end
 

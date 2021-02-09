@@ -71,9 +71,10 @@ class WorkEase
       puts "active: #{@state[part][:active?]}"
       puts "#{part}-time active: #{time - @state[part][:activity_start]}"
     end
+
     @state[part][:active?] &&
       time - @state[part][:activity_start] > @state[part][:max_exertion] &&
-      time > @state[part][:last_activity]
+      time >= @state[part][:last_activity]
   end
 
   def check_feet(feet_path)
@@ -84,7 +85,27 @@ class WorkEase
 
   def check_talon(talon_path)
     File::Tail::Logfile.tail(talon_path, backward: 1, interval: TAIL_INTERVAL) do |line|
-      check_talon(line)
+      if line.start_with?('Pop sound at ')
+        time = line.delete_prefix('Pop sound at ').to_i
+        @state[:talon][:last_activity] = time if @state[:talon][:last_activity].nil?
+
+        if time - @state[:talon][:last_activity] < @state[:talon][:min_rest]
+          unless @state[:talon][:active?]
+            @state[:talon][:activity_start] = @state[:talon][:last_activity]
+          end
+          @state[:talon][:active?] = true
+        else
+          @state[:talon][:active?] = false
+          @state[:talon][:activity_start] = time
+        end
+
+        if activity_exceeded?(:talon)
+          warn("Over 30 minutes active with zoom mouse, wait #{@state[:talon][:min_rest]} seconds")
+          rest_timer(@state[:talon][:min_rest], :talon)
+        end
+
+        @state[:talon][:last_activity] = time
+      end
     end
   end
 
@@ -142,30 +163,6 @@ class WorkEase
     while @running
       call_logic
       sleep SLACK_CALL_INTERVAL
-    end
-  end
-
-  def check_talon(line)
-    if line.start_with?('Pop sound at ')
-      time = Time.at(line.slice('Pop sound at ')).to_i
-      @state[:talon][:last_activity] = time if @state[:talon][:last_activity].nil?
-
-      if time - @state[:talon][:last_activity] < @state[:talon][:min_rest]
-        unless @state[:talon][:active?]
-          @state[:talon][:activity_start] = @state[:talon][:last_activity]
-        end
-        @state[:talon][:active?] = true
-      else
-        @state[:talon][:active?] = false
-        @state[:talon][:activity_start] = time
-      end
-
-      if activity_exceeded?(:talon)
-        warn("Over 30 minutes active with zoom mouse, wait #{@state[:talon][:min_rest]} seconds")
-        rest_timer(@state[:talon][:min_rest], :talon)
-      end
-
-      @state[:talon][:last_activity] = time
     end
   end
 

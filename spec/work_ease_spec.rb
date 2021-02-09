@@ -32,7 +32,7 @@ keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB 
 
 RSpec.describe WorkEase do
   before(:each) do
-    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', talon_path: "#{ENV['HOME']}/code/workease/talon_log.txt", voice_path: '../inputs/voice')
+    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', talon_path: "#{ENV['HOME']}/Work\ for\ Lucas/workease/talon_log.txt", voice_path: '../inputs/voice')
     @w.testing = true
     @time = Time.at(1_591_192_757)
   end
@@ -64,6 +64,7 @@ RSpec.describe WorkEase do
       expect(@w).to receive(:check_voice)
       expect(@w).to receive(:check_device)
       expect(@w).to receive(:check_slack_call)
+      expect(@w).to receive(:check_talon)
       expect(@w).to receive(:overall_activity)
       @w.start
     end
@@ -74,7 +75,7 @@ RSpec.describe WorkEase do
       set_time(0)
       exertion_limit = @w.state[:voice][:max_exertion]
       @w.state[:voice][:active?] = true
-      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit - 1
+      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit
       @w.state[:voice][:last_activity] = @time.to_i
 
       result = @w.activity_exceeded?(:voice)
@@ -84,7 +85,7 @@ RSpec.describe WorkEase do
     it 'returns true if bodypart has been too active' do
       exertion_limit = @w.state[:voice][:max_exertion]
       @w.state[:voice][:active?] = true
-      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit
+      @w.state[:voice][:activity_start] = @time.to_i - exertion_limit - 1
       @w.state[:voice][:last_activity] = @time.to_i
 
       result = @w.activity_exceeded?(:voice)
@@ -232,9 +233,10 @@ RSpec.describe WorkEase do
 
   describe '@#talon_check' do
     it 'returns true if talon zoom mouse was too active' do
+      set_time(0)
       exertion_limit = @w.state[:talon][:max_exertion]
       @w.state[:talon][:active?] = true
-      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit
+      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit - 1
       @w.state[:talon][:last_activity] = @time.to_i
 
       result = @w.activity_exceeded?(:talon)
@@ -245,7 +247,7 @@ RSpec.describe WorkEase do
       set_time(0)
       exertion_limit = @w.state[:talon][:max_exertion]
       @w.state[:talon][:active?] = true
-      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit - 1
+      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit
       @w.state[:talon][:last_activity] = @time.to_i
 
       result = @w.activity_exceeded?(:talon)

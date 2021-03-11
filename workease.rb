@@ -253,7 +253,9 @@ class WorkEase
   def rest_timer(time, activity)
     message = "#{activity}-break over"
     return if @testing
+    return if @quiet_until && @quiet_until > Time.now.to_i
 
+    @quiet_until = Time.now.to_i + 5
     pid = Process.fork do
       sleep time
       `paplay --volume 30000 ./sounds/service-login.ogg`

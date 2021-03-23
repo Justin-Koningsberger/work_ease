@@ -119,32 +119,32 @@ RSpec.describe WorkEase do
   end
 
   describe '#call_logic' do
-    it 'sends a warning if a slack call takes more than 45 minutes' do
+    it 'sends a warning if a slack call takes more than 28 minutes' do
       allow(@w).to receive(:slack_call_found?).and_return(true)
       call_check(0)
-      call_check(45.minutes + 1)
+      call_check(28.minutes + 1)
 
-      fixture = ["2020-06-03 16:44:18 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      fixture = ["2020-06-03 16:27:18 +0200 - You have been on a call for over 28 minutes, take a 10 minute break\n"]
       expect(@w.warn_log).to eq(fixture)
     end
 
-    it 'also warns if two calls together take more than 45 minutes without a 10 min break' do
+    it 'also warns if two calls together take more than 28 minutes without a 10 min break' do
       allow(@w).to receive(:slack_call_found?).and_return(true)
       call_check(0)
       allow(@w).to receive(:slack_call_found?).and_return(false)
-      call_check(25.minutes) # 1st call ended after 25 minutes
+      call_check(15.minutes) # 1st call ended after 15 minutes
       allow(@w).to receive(:slack_call_found?).and_return(true)
-      call_check(34.minutes) # 2nd call started after 9 minute break
-      call_check(54.minutes) # 45 minutes total
+      call_check(24.minutes) # 2nd call started after 9 minute break
+      call_check(37.minutes) # 28 minutes total
 
-      fixture = ["2020-06-03 16:53:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      fixture = ["2020-06-03 16:36:17 +0200 - You have been on a call for over 28 minutes, take a 10 minute break\n"]
       expect(@w.warn_log).to eq(fixture)
     end
 
-    it 'does not warn if a call take less than 45 minutes' do
+    it 'does not warn if a call take less than 28 minutes' do
       allow(@w).to receive(:slack_call_found?).and_return(true)
       call_check(0)
-      call_check(44.minutes + 59)
+      call_check(27.minutes + 59)
 
       fixture = []
       expect(@w.warn_log).to eq(fixture)
@@ -168,9 +168,9 @@ RSpec.describe WorkEase do
       allow(@w).to receive(:slack_call_found?).and_return(true)
       [0, 45, 50, 55].each { |n| call_check(n.minutes) }
 
-      fixture = ["2020-06-03 16:44:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
-                 "2020-06-03 16:49:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n",
-                 "2020-06-03 16:54:17 +0200 - You have been on a call for over 45 minutes, take a 10 minute break\n"]
+      fixture = ["2020-06-03 16:44:17 +0200 - You have been on a call for over 28 minutes, take a 10 minute break\n",
+                 "2020-06-03 16:49:17 +0200 - You have been on a call for over 28 minutes, take a 10 minute break\n",
+                 "2020-06-03 16:54:17 +0200 - You have been on a call for over 28 minutes, take a 10 minute break\n"]
       expect(@w.warn_log).to eq(fixture)
     end
   end

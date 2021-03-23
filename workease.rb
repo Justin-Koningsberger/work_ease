@@ -87,7 +87,11 @@ class WorkEase
     File::Tail::Logfile.tail(talon_path, backward: 1, interval: TAIL_INTERVAL) do |line|
       if line.start_with?('Pop sound at ')
         time = line.delete_prefix('Pop sound at ').to_i
-        @state[:talon][:last_activity] = time if @state[:talon][:last_activity].nil?
+        if @state[:talon][:last_activity].nil? && Time.now.to_i - time < 1
+          @state[:talon][:last_activity] = time
+        end
+
+        return if @state[:talon][:last_activity].nil?
 
         if time - @state[:talon][:last_activity] < @state[:talon][:min_rest]
           unless @state[:talon][:active?]
@@ -192,7 +196,7 @@ class WorkEase
         return
       end
 
-      warn('You have been on a call for over 45 minutes, take a 10 minute break')
+      warn('You have been on a call for over 28 minutes, take a 10 minute break')
       rest_timer(SLACK_REST_TIME, 'slack_call')
       @last_warning = Time.now.to_i
     end

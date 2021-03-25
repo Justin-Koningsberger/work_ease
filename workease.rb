@@ -21,7 +21,7 @@ class WorkEase
   SLACK_WARNING_SNOOZE = 5.minutes
   STRETCH_TIME = 15.minutes
 
-  def initialize(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, voice_path:)
+  def initialize(keyboard_id:, mouse_id:, bodypart_activity:, feet_path:, talon_path:, voice_path:)
     @state = bodypart_activity
     @feet_path = feet_path
     @keyboard_id = keyboard_id
@@ -29,6 +29,7 @@ class WorkEase
     @pause_until = 0
     @running = true
     @semaphore = Mutex.new
+    @talon_path = talon_path
     @testing = false
     @voice_path = voice_path
     @warn_log = []
@@ -42,6 +43,7 @@ class WorkEase
     threads << Thread.new { check_device(@keyboard_id, @mouse_id) }
     threads << Thread.new { check_slack_call }
     threads << Thread.new { overall_activity }
+    threads << Thread.new { check_zoom_mouse(@talon_path) }
     threads.each(&:join)
   end
 
@@ -69,14 +71,21 @@ class WorkEase
       puts "active: #{@state[part][:active?]}"
       puts "#{part}-time active: #{time - @state[part][:activity_start]}"
     end
+
     @state[part][:active?] &&
       time - @state[part][:activity_start] > @state[part][:max_exertion] &&
-      time > @state[part][:last_activity]
+      time >= @state[part][:last_activity]
   end
 
   def check_feet(feet_path)
     File::Tail::Logfile.tail(feet_path, backward: 1, interval: TAIL_INTERVAL) do |_line|
       check(:feet)
+    end
+  end
+
+  def check_zoom_mouse(talon_path)
+    File::Tail::Logfile.tail(talon_path, backward: 1, interval: TAIL_INTERVAL) do |line|
+      check(:zoom_mouse)
     end
   end
 
@@ -163,7 +172,7 @@ class WorkEase
         return
       end
 
-      warn('You have been on a call for over 45 minutes, take a 10 minute break')
+      warn('You have been on a call for over 28 minutes, take a 10 minute break')
       rest_timer(SLACK_REST_TIME, 'slack_call')
       @last_warning = Time.now.to_i
     end
@@ -224,7 +233,9 @@ class WorkEase
   def rest_timer(time, activity)
     message = "#{activity}-break over"
     return if @testing
+    return if @quiet_until && @quiet_until > Time.now.to_i
 
+    @quiet_until = Time.now.to_i + 5
     pid = Process.fork do
       sleep time
       `paplay --volume 30000 ./sounds/service-login.ogg`

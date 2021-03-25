@@ -15,6 +15,11 @@ bodypart_activity = {
            active?: false,
            max_exertion: 10,
            activity_start: nil },
+  zoom_mouse: { last_activity: nil,
+           min_rest: 180,
+           active?: false,
+           max_exertion: 1800,
+           activity_start: nil },
   voice: { last_activity: nil,
            min_rest: 10,
            active?: false,
@@ -69,4 +74,4 @@ end.parse!
 
 keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB Keyboard', mouse_name: 'VirtualBox mouse integration')
 
-WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: 'inputs/feet', voice_path: 'inputs/voice').start
+WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: 'inputs/feet', talon_path: 'talon_log.txt', voice_path: 'inputs/voice').start

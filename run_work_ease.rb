@@ -15,7 +15,7 @@ bodypart_activity = {
            active?: false,
            max_exertion: 10,
            activity_start: nil },
-  talon: { last_activity: nil,
+  zoom_mouse: { last_activity: nil,
            min_rest: 180,
            active?: false,
            max_exertion: 1800,

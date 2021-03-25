@@ -16,7 +16,7 @@ bodypart_activity = {
            active?: false,
            max_exertion: 10,
            activity_start: nil },
-  talon: { last_activity: nil,
+  zoom_mouse: { last_activity: nil,
            min_rest: 180,
            active?: false,
            max_exertion: 1800,
@@ -32,7 +32,7 @@ keyboard_id, mouse_id = WorkEase.find_device_ids(keyboard_name: 'VirtualBox USB 
 
 RSpec.describe WorkEase do
   before(:each) do
-    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', talon_path: "#{ENV['HOME']}/Work\ for\ Lucas/workease/talon_log.txt", voice_path: '../inputs/voice')
+    @w = WorkEase.new(keyboard_id: keyboard_id, mouse_id: mouse_id, bodypart_activity: bodypart_activity, feet_path: '../inputs/feet', talon_path: "#{ENV['HOME']}/Work\ for\ Lucas/workease/zoom_mouse_log.txt", voice_path: '../inputs/voice')
     @w.testing = true
     @time = Time.at(1_591_192_757)
   end
@@ -64,7 +64,7 @@ RSpec.describe WorkEase do
       expect(@w).to receive(:check_voice)
       expect(@w).to receive(:check_device)
       expect(@w).to receive(:check_slack_call)
-      expect(@w).to receive(:check_talon)
+      expect(@w).to receive(:check_zoom_mouse)
       expect(@w).to receive(:overall_activity)
       @w.start
     end
@@ -231,26 +231,26 @@ RSpec.describe WorkEase do
     end
   end
 
-  describe '@#talon_check' do
-    it 'returns true if talon zoom mouse was too active' do
+  describe '@#zoom_mouse_check' do
+    it 'returns true if zoom_mouse was too active' do
       set_time(0)
-      exertion_limit = @w.state[:talon][:max_exertion]
-      @w.state[:talon][:active?] = true
-      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit - 1
-      @w.state[:talon][:last_activity] = @time.to_i
+      exertion_limit = @w.state[:zoom_mouse][:max_exertion]
+      @w.state[:zoom_mouse][:active?] = true
+      @w.state[:zoom_mouse][:activity_start] = @time.to_i - exertion_limit - 1
+      @w.state[:zoom_mouse][:last_activity] = @time.to_i
 
-      result = @w.activity_exceeded?(:talon)
+      result = @w.activity_exceeded?(:zoom_mouse)
       expect(result).to eq(true)
     end
 
-    it 'returns false if talon zoom mouse was not too active' do
+    it 'returns false if zoom_mouse zoom mouse was not too active' do
       set_time(0)
-      exertion_limit = @w.state[:talon][:max_exertion]
-      @w.state[:talon][:active?] = true
-      @w.state[:talon][:activity_start] = @time.to_i - exertion_limit
-      @w.state[:talon][:last_activity] = @time.to_i
+      exertion_limit = @w.state[:zoom_mouse][:max_exertion]
+      @w.state[:zoom_mouse][:active?] = true
+      @w.state[:zoom_mouse][:activity_start] = @time.to_i - exertion_limit
+      @w.state[:zoom_mouse][:last_activity] = @time.to_i
 
-      result = @w.activity_exceeded?(:talon)
+      result = @w.activity_exceeded?(:zoom_mouse)
       expect(result).to eq(false)
     end
   end

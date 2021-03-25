@@ -43,7 +43,7 @@ class WorkEase
     threads << Thread.new { check_device(@keyboard_id, @mouse_id) }
     threads << Thread.new { check_slack_call }
     threads << Thread.new { overall_activity }
-    threads << Thread.new { check_talon(@talon_path) }
+    threads << Thread.new { check_zoom_mouse(@talon_path) }
     threads.each(&:join)
   end
 
@@ -83,33 +83,9 @@ class WorkEase
     end
   end
 
-  def check_talon(talon_path)
+  def check_zoom_mouse(talon_path)
     File::Tail::Logfile.tail(talon_path, backward: 1, interval: TAIL_INTERVAL) do |line|
-      if line.start_with?('Pop sound at ')
-        time = line.delete_prefix('Pop sound at ').to_i
-        if @state[:talon][:last_activity].nil? && Time.now.to_i - time < 1
-          @state[:talon][:last_activity] = time
-        end
-
-        return if @state[:talon][:last_activity].nil?
-
-        if time - @state[:talon][:last_activity] < @state[:talon][:min_rest]
-          unless @state[:talon][:active?]
-            @state[:talon][:activity_start] = @state[:talon][:last_activity]
-          end
-          @state[:talon][:active?] = true
-        else
-          @state[:talon][:active?] = false
-          @state[:talon][:activity_start] = time
-        end
-
-        if activity_exceeded?(:talon)
-          warn("Over 30 minutes active with zoom mouse, wait #{@state[:talon][:min_rest]} seconds")
-          rest_timer(@state[:talon][:min_rest], :talon)
-        end
-
-        @state[:talon][:last_activity] = time
-      end
+      check(:zoom_mouse)
     end
   end
 

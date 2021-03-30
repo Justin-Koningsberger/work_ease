@@ -232,8 +232,9 @@ class WorkEase
 
   def rest_timer(time, activity)
     message = "#{activity}-break over"
-    return if @testing
+    return if @testing || screen_locked?
     return if @quiet_until && @quiet_until > Time.now.to_i
+
 
     @quiet_until = Time.now.to_i + 5
     pid = Process.fork do
@@ -242,6 +243,11 @@ class WorkEase
       `xmessage #{message} -center -timeout 2`
     end
     Process.detach(pid)
+  end
+
+  def screen_locked?
+    status = `gnome-screensaver-command -t`
+    status.include?('is not currently active.')
   end
 
   def slack_call_found?
@@ -258,7 +264,7 @@ class WorkEase
       message = "#{Time.now} - #{reason}\n"
       @warn_log << message
     elsif Time.now.to_i > @pause_until
-      `paplay --volume 30000 ./sounds/when.ogg`
+      `paplay --volume 30000 ./sounds/when.ogg` unless screen_locked?
       @pause_until = Time.now.to_i + 2
       sleep 1
       pid = Process.fork do

@@ -68,8 +68,8 @@ class WorkEase
   def activity_exceeded?(part)
     time = Time.now.to_i
     unless @testing
-      puts "active: #{@state[part][:active?]}"
-      puts "#{part}-time active: #{time - @state[part][:activity_start]}"
+      # puts "active: #{@state[part][:active?]}"
+      # puts "#{part}-time active: #{time - @state[part][:activity_start]}"
     end
 
     @state[part][:active?] &&
@@ -210,6 +210,15 @@ class WorkEase
       if @last_oa_warning && Time.now - @last_oa_warning < OVERALL_ACTIVITY_WARNING_SNOOZE
         return
       end
+
+      puts "\n\n--------------------"
+      puts "time            : #{time}"
+      puts "@time_active    : #{@time_active}"
+      puts "feet_active     : #{feet_active}"
+      puts "hands_active    : #{hands_active}"
+      puts "voice_active    : #{voice_active}"
+      puts "call_active     : #{call_active}"
+      puts "@last_oa_warning: #{@last_oa_warning}"
 
       messg = "You have been fairly active for #{(time - @time_active) / 60} minutes, take a ten minute break"
       warn(messg)
